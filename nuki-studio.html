@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>누끼 스튜디오 — 브라우저에서 배경 제거</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/human/3.3.6/human.js"></script>
+<style>
+  :root{
+    --bg:#14171b;
+    --panel:#1b1f24;
+    --panel-2:#20252b;
+    --panel-3:#262c33;
+    --line:#2a2f36;
+    --line-soft:#232830;
+    --text:#edebe6;
+    --text-dim:#9096a1;
+    --text-faint:#5c626c;
+    --amber:#ffb020;
+    --amber-dim:#8a5f14;
+    --amber-glow:rgba(255,176,32,0.16);
+    --teal:#4fd1c5;
+    --danger:#ff6b6b;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 600px at 50% -10%, rgba(255,176,32,0.05), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:48px 20px 80px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--amber);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:6px;height:6px;border-radius:50%;
+    background:var(--amber);
+    box-shadow:0 0 8px 1px var(--amber);
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(28px,4vw,40px);
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  h1 span{color:var(--amber);}
+  .sub{
+    color:var(--text-dim);
+    font-size:15px;
+    line-height:1.6;
+    max-width:520px;
+    text-align:center;
+    margin:0 0 40px;
+  }
+  .stage{
+    width:100%;
+    max-width:720px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+    box-shadow:0 20px 60px -20px rgba(0,0,0,0.6);
+  }
+
+  /* ---- dropzone ---- */
+  .dropzone{
+    position:relative;
+    margin:20px;
+    height:360px;
+    border-radius:10px;
+    border:1.5px dashed var(--line);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .2s ease, background .2s ease;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, var(--line-soft) 39px, var(--line-soft) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, var(--line-soft) 39px, var(--line-soft) 40px);
+  }
+  .dropzone.drag{
+    border-color:var(--amber);
+    background-color:var(--amber-glow);
+  }
+  .dz-icon{
+    width:52px;height:52px;
+    border-radius:50%;
+    border:1.5px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:18px;
+    color:var(--text-dim);
+    transition:all .2s ease;
+  }
+  .dropzone.drag .dz-icon{border-color:var(--amber);color:var(--amber);}
+  .dz-title{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:17px;margin-bottom:6px;}
+  .dz-sub{color:var(--text-faint);font-size:13px;}
+  .dz-sub b{color:var(--text-dim);font-weight:500;}
+  #fileInput{display:none;}
+
+  /* ---- workspace ---- */
+  .workspace{display:none;}
+  .workspace.active{display:block;}
+
+  /* ---- tabs ---- */
+  .tabs{
+    display:flex; gap:6px;
+    margin:20px 20px 0;
+    padding:4px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:9px;
+  }
+  .tab-btn{
+    flex:1;
+    border:none;
+    background:transparent;
+    color:var(--text-dim);
+    font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:600;
+    padding:9px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .tab-btn.active{background:var(--panel-3); color:var(--text);}
+  .tab-btn:not(.active):hover{color:var(--text);}
+
+  .canvas-wrap{
+    position:relative;
+    margin:14px 20px 0;
+    border-radius:10px;
+    overflow:hidden;
+    background:
+      linear-gradient(45deg, #26292e 25%, transparent 25%),
+      linear-gradient(-45deg, #26292e 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #26292e 75%),
+      linear-gradient(-45deg, transparent 75%, #26292e 75%);
+    background-size:20px 20px;
+    background-position:0 0, 0 10px, 10px -10px, -10px 0px;
+    background-color:#1a1d21;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:300px;
+  }
+  .compare{position:relative;line-height:0;max-width:100%;}
+  .compare img, .compare canvas{
+    display:block;
+    max-width:100%;
+    max-height:60vh;
+    width:auto;height:auto;
+  }
+  .layer-result{
+    position:absolute;top:0;left:0;
+    clip-path:inset(0 50% 0 0);
+  }
+  .handle{
+    position:absolute;top:0;bottom:0;left:50%;
+    width:0;
+    cursor:ew-resize;
+    z-index:5;
+  }
+  .handle::before{
+    content:"";
+    position:absolute;top:0;bottom:0;left:-1px;
+    width:2px;
+    background:var(--amber);
+    box-shadow:0 0 10px var(--amber-glow);
+  }
+  .handle::after{
+    content:"◂▸";
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    width:32px;height:32px;
+    border-radius:50%;
+    background:var(--amber);
+    color:#1a1300;
+    font-size:11px;
+    font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    letter-spacing:-1px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.4);
+  }
+  .tag{
+    position:absolute; top:10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; letter-spacing:.08em;
+    padding:4px 8px; border-radius:5px;
+    background:rgba(20,23,27,0.8);
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    text-transform:uppercase;
+    pointer-events:none;
+  }
+  .tag.before{left:10px;}
+  .tag.after{right:10px;color:var(--amber);border-color:var(--amber-dim);}
+
+  /* ---- retouch mode ---- */
+  .retouch-wrap{
+    display:none;
+    position:relative;
+    width:100%;
+    max-height:60vh;
+    overflow:auto;
+    text-align:center;
+    line-height:0;
+  }
+  .retouch-stage{
+    position:relative;
+    display:inline-block;
+    line-height:0;
+  }
+  #retouchCanvas{ display:block; cursor:none; touch-action:none; }
+  #retouchCanvas.pan-mode{ cursor:grab; touch-action:pan-x pan-y; }
+  #retouchCanvas.pan-mode:active{ cursor:grabbing; }
+  #lassoOverlay{
+    position:absolute; top:0; left:0;
+    pointer-events:none;
+  }
+  .brush-cursor{
+    position:absolute;
+    pointer-events:none;
+    border:1.5px solid var(--amber);
+    border-radius:50%;
+    box-shadow:0 0 0 1px rgba(0,0,0,0.5);
+    transform:translate(-50%,-50%);
+    display:none;
+    z-index:6;
+  }
+  .brush-cursor.restore{ border-color:var(--teal); }
+  .brush-cursor.lasso{ display:none !important; }
+  .retouch-hint{
+    padding:8px 20px 0;
+    font-size:12px; color:var(--text-faint);
+    display:none;
+  }
+
+  .brush-bar{
+    display:none;
+    flex-direction:column;
+    gap:8px;
+    padding:12px 20px 0;
+  }
+  .bar-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .seg{
+    display:flex; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:3px;
+  }
+  .seg button{
+    border:none; background:transparent; padding:8px 12px; font-size:12.5px; font-weight:600;
+    border-radius:5px; color:var(--text-dim); cursor:pointer;
+  }
+  .seg button.active{background:var(--panel-3); color:var(--text);}
+  .seg button.active.erase{color:var(--amber);}
+  .seg button.active.restore{color:var(--teal);}
+  .seg button.active.lasso{color:var(--teal);}
+  .size-row{ display:flex; align-items:center; gap:8px; }
+  .size-row label{ font-size:12px; color:var(--text-faint); font-family:'JetBrains Mono',monospace; }
+  .size-row input[type=range]{ width:100px; accent-color:var(--amber); }
+  .zoom-row{ display:flex; align-items:center; gap:4px; margin-left:auto; }
+  .zoom-label{
+    font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-dim);
+    min-width:42px; text-align:center;
+  }
+  .icon-btn{
+    border:1px solid var(--line); background:var(--panel-2); color:var(--text-dim);
+    width:34px; height:34px; border-radius:8px; cursor:pointer; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .icon-btn:hover{ color:var(--text); border-color:#3a4149; }
+  .icon-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .icon-btn.active{ background:var(--amber); border-color:var(--amber); color:#1a1300; }
+
+  /* ---- processing overlay ---- */
+  .scan-overlay{
+    position:absolute; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    background:rgba(15,17,20,0.55);
+    backdrop-filter:blur(1px);
+  }
+  .scan-overlay.active{display:flex;}
+  .scan-box{text-align:center;}
+  .scan-line-wrap{
+    position:absolute; inset:0; overflow:hidden; border-radius:10px;
+  }
+  .scan-line{
+    position:absolute; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--amber), transparent);
+    box-shadow:0 0 14px 2px var(--amber);
+    animation:scan 1.8s ease-in-out infinite;
+  }
+  @keyframes scan{
+    0%{top:0%;}
+    50%{top:100%;}
+    100%{top:0%;}
+  }
+  .scan-msg{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px; letter-spacing:.08em;
+    color:var(--amber);
+    background:rgba(20,23,27,0.85);
+    border:1px solid var(--amber-dim);
+    padding:8px 16px;
+    border-radius:20px;
+  }
+
+  /* ---- controls ---- */
+  .controls{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; padding:16px 20px 22px; flex-wrap:wrap;
+  }
+  .hint{font-size:12.5px; color:var(--text-faint); line-height:1.5;}
+  .btn-row{display:flex; gap:10px;}
+  button{
+    font-family:'Inter',sans-serif;
+    font-size:13.5px; font-weight:600;
+    padding:11px 18px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--panel-2);
+    color:var(--text);
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  button:hover{border-color:#3a4149; background:#252b32;}
+  button:disabled{opacity:.4; cursor:not-allowed;}
+  .btn-primary{
+    background:var(--amber); border-color:var(--amber); color:#1a1300;
+  }
+  .btn-primary:hover{background:#ffc04d; border-color:#ffc04d;}
+
+  .error-box{
+    display:none;
+    margin:0 20px 20px;
+    padding:14px 16px;
+    border-radius:8px;
+    border:1px solid #4a2323;
+    background:#241717;
+    color:var(--danger);
+    font-size:13px;
+    line-height:1.6;
+  }
+  .error-box.active{display:block;}
+  .error-box.warn{ border-color:var(--amber-dim); background:#26210f; color:var(--amber); }
+
+  footer{
+    margin-top:28px;
+    color:var(--text-faint);
+    font-size:12px;
+    text-align:center;
+    max-width:520px;
+    line-height:1.7;
+  }
+  footer b{color:var(--text-dim);}
+
+  @media (max-width:600px){
+    .stage{max-width:100%;}
+    .dropzone{height:280px; margin:14px;}
+    .canvas-wrap{margin:14px 14px 0;}
+    .tabs{margin:14px 14px 0;}
+    .controls{padding:16px 14px 18px;}
+  }
+</style>
+</head>
+<body>
+
+  <div class="eyebrow">Client-side AI</div>
+  <h1>누끼 <span>스튜디오</span></h1>
+  <p class="sub">이미지를 올리면 브라우저 안에서 바로 배경을 도려내요. 서버로 전송되지 않아서, 사진은 이 기기 밖으로 나가지 않습니다.</p>
+
+  <div class="stage">
+
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div class="dz-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="dz-title">이미지를 여기에 끌어다 놓으세요</div>
+      <div class="dz-sub">클릭해서 파일 선택 · <b>JPG / PNG / WEBP</b> · Ctrl+V 붙여넣기도 가능해요</div>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+
+    <div class="workspace" id="workspace">
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tabCompare">비교</button>
+        <button class="tab-btn" id="tabRetouch">다듬기</button>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <div class="compare" id="compare">
+          <img id="beforeImg" alt="원본 이미지">
+          <canvas class="layer-result" id="resultCanvas"></canvas>
+          <div class="handle" id="handle"></div>
+          <span class="tag before">원본</span>
+          <span class="tag after">배경 제거</span>
+        </div>
+
+        <div class="retouch-wrap" id="retouchWrap">
+          <div class="retouch-stage" id="retouchStage">
+            <canvas id="retouchCanvas"></canvas>
+            <canvas id="lassoOverlay"></canvas>
+          </div>
+        </div>
+
+        <div class="brush-cursor" id="brushCursor"></div>
+
+        <div class="scan-overlay" id="scanOverlay">
+          <div class="scan-line-wrap"><div class="scan-line"></div></div>
+          <div class="scan-box"><div class="scan-msg" id="scanMsg">모델을 불러오는 중…</div></div>
+        </div>
+      </div>
+
+      <div class="brush-bar" id="brushBar">
+        <div class="bar-row">
+          <div class="seg">
+            <button class="erase active" id="modeErase">지우기</button>
+            <button class="restore" id="modeRestore">복원</button>
+            <button class="lasso" id="modeLasso">영역 선택 복원</button>
+          </div>
+          <div class="size-row" id="sizeRow">
+            <label>SIZE</label>
+            <input type="range" id="brushSize" min="6" max="120" value="30">
+          </div>
+        </div>
+        <div class="bar-row">
+          <button class="icon-btn" id="undoBtn" title="실행취소">↺</button>
+          <button class="icon-btn" id="resetAIBtn" title="AI 결과로 초기화">⟲</button>
+          <button class="icon-btn" id="smoothBtn" title="가장자리 라인 매끄럽게 다듬기">〰</button>
+          <button class="icon-btn" id="panToggleBtn" title="이동(화면 스크롤) 모드">✋</button>
+          <div class="zoom-row">
+            <button class="icon-btn" id="zoomOutBtn" title="축소">−</button>
+            <span class="zoom-label" id="zoomLabel">100%</span>
+            <button class="icon-btn" id="zoomInBtn" title="확대">+</button>
+            <button class="icon-btn" id="zoomFitBtn" title="화면에 맞춤">⛶</button>
+          </div>
+        </div>
+      </div>
+      <div class="retouch-hint" id="retouchHint">배경으로 잘못 지워진 부분을 선을 따라 감싸면, 감싼 영역이 원본 그대로 복원돼요. 휠(스크롤)로 확대/축소할 수 있어요.</div>
+
+      <div class="controls">
+        <div class="hint" id="hint">슬라이더를 좌우로 끌어서 전/후를 비교해보세요.</div>
+        <div class="btn-row">
+          <button id="resetBtn">다른 이미지</button>
+          <button id="downloadBtn" class="btn-primary" disabled>PNG로 저장</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    사람이 뚜렷하게 나온 사진에서 가장 잘 작동해요. 자동 인식이 아쉬우면 "다듬기" 탭에서 브러시로 직접 지우거나 복원할 수 있어요.<br>
+    처리는 전부 기기 안에서 이뤄지며 서버로 전송되지 않아요. Powered by <b>Human</b> — 완전 오픈소스.
+  </footer>
+
+<script>
+(function(){
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const workspace = document.getElementById('workspace');
+  const beforeImg = document.getElementById('beforeImg');
+  const resultCanvas = document.getElementById('resultCanvas');
+  const compare = document.getElementById('compare');
+  const handle = document.getElementById('handle');
+  const scanOverlay = document.getElementById('scanOverlay');
+  const scanMsg = document.getElementById('scanMsg');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const errorBox = document.getElementById('errorBox');
+  const hint = document.getElementById('hint');
+
+  const tabCompare = document.getElementById('tabCompare');
+  const tabRetouch = document.getElementById('tabRetouch');
+  const canvasWrap = document.getElementById('canvasWrap');
+  const retouchWrap = document.getElementById('retouchWrap');
+  const retouchStage = document.getElementById('retouchStage');
+  const retouchCanvas = document.getElementById('retouchCanvas');
+  const lassoOverlay = document.getElementById('lassoOverlay');
+  const brushCursor = document.getElementById('brushCursor');
+  const brushBar = document.getElementById('brushBar');
+  const modeEraseBtn = document.getElementById('modeErase');
+  const modeRestoreBtn = document.getElementById('modeRestore');
+  const modeLassoBtn = document.getElementById('modeLasso');
+  const sizeRow = document.getElementById('sizeRow');
+  const retouchHint = document.getElementById('retouchHint');
+  const brushSizeInput = document.getElementById('brushSize');
+  const undoBtn = document.getElementById('undoBtn');
+  const resetAIBtn = document.getElementById('resetAIBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomFitBtn = document.getElementById('zoomFitBtn');
+  const zoomLabel = document.getElementById('zoomLabel');
+  const panToggleBtn = document.getElementById('panToggleBtn');
+  const smoothBtn = document.getElementById('smoothBtn');
+
+  const MAX_DIM = 1400;
+  let human = null;
+  let resultBlobUrl = null;
+
+  let originalCanvasEl = null;   // 원본(불투명) 전체 이미지 캔버스 - 복원 브러시 및 수동 보정에 사용
+  let aiResultDataUrl = null;    // "AI 결과로 초기화" 버튼용 스냅샷
+  let brushMode = 'erase';       // 'erase' | 'restore' | 'lasso'
+  let undoStack = [];
+  let lassoPoints = [];
+  let lassoActive = false;
+  let zoomLevel = 1;
+  let zoomInitDone = false;
+  let panMode = false;
+
+  function showError(msg, warn){
+    errorBox.textContent = msg;
+    errorBox.classList.add('active');
+    errorBox.classList.toggle('warn', !!warn);
+  }
+  function clearError(){
+    errorBox.classList.remove('active');
+    errorBox.classList.remove('warn');
+    errorBox.textContent = '';
+  }
+
+  async function getHuman(){
+    if (human) return human;
+    const HumanCtor = (typeof Human !== 'undefined' && Human && typeof Human.Human === 'function')
+      ? Human.Human
+      : (typeof Human === 'function' ? Human : null);
+    if (!HumanCtor) {
+      throw new Error('AI 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침 해주세요.');
+    }
+    const baseConfig = {
+      modelBasePath: 'https://cdn.jsdelivr.net/gh/vladmandic/human-models/models/',
+      debug: false,
+      async: true,
+      cacheSensitivity: 0,
+      warmup: 'none',
+      face: { enabled: false },
+      body: { enabled: false },
+      hand: { enabled: false },
+      object: { enabled: false },
+      gesture: { enabled: false },
+      segmentation: { enabled: false },
+    };
+    try {
+      human = new HumanCtor(Object.assign({}, baseConfig, { backend: 'webgl' }));
+      await human.init();
+      return human;
+    } catch (e) {
+      console.error('webgl backend init failed, retrying with cpu', e);
+      human = new HumanCtor(Object.assign({}, baseConfig, { backend: 'cpu' }));
+      await human.init();
+      return human;
+    }
+  }
+
+  const MODEL_BASE = 'https://cdn.jsdelivr.net/gh/vladmandic/human-models/models/';
+
+  let lastSegError = '';
+
+  async function testModelAccess(){
+    try {
+      const resp = await fetch(MODEL_BASE + 'selfie.json', { method: 'GET' });
+      return `fetch 상태: HTTP ${resp.status} (ok=${resp.ok})`;
+    } catch (e) {
+      return `fetch 자체가 실패함: ${e && e.message ? e.message : e}`;
+    }
+  }
+
+
+  async function safeSegment(H, canvas, cfg){
+    try {
+      return await H.segmentation(canvas, { segmentation: Object.assign({ enabled: true }, cfg) });
+    } catch (e) {
+      console.error('segmentation error', cfg, e);
+      lastSegError = (e && e.message) ? e.message : String(e);
+      return null;
+    }
+  }
+
+  // 배경 제거는 두 모델을 순서대로 시도한다.
+  // 1) selfie: 사진 한 장 처리에 최적화된 모델(빠르고 안정적, 사람 위주)
+  // 2) rvm: 원래 동영상용 매팅 모델이라 같은 프레임을 여러 번 통과시켜야 정확도가 올라감
+  // 어느 쪽이든 결과가 "사실상 아무것도 안 지워짐"이면 다음 후보로 넘어가고,
+  // 그래도 안 되면 그나마 나은 결과를, 그것도 없으면 null을 반환한다.
+  async function runSegmentation(H, canvas, w, h){
+    let fallback = null;
+    lastSegError = '';
+
+    const selfieTensor = await safeSegment(H, canvas, { modelPath: 'selfie.json', mode: 'default' });
+    if (selfieTensor) {
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      await tensorToCanvas(H, selfieTensor, c, w, h);
+      selfieTensor.dispose && selfieTensor.dispose();
+      if (!isMaskDegenerate(c)) return c;
+      fallback = c;
+    }
+
+    let rvmTensor = null;
+    for (let i = 0; i < 3; i++) {
+      if (rvmTensor) rvmTensor.dispose && rvmTensor.dispose();
+      rvmTensor = await safeSegment(H, canvas, { modelPath: 'rvm.json', mode: 'default', ratio: 0.4 });
+      if (!rvmTensor) break;
+    }
+    if (rvmTensor) {
+      const c2 = document.createElement('canvas'); c2.width = w; c2.height = h;
+      await tensorToCanvas(H, rvmTensor, c2, w, h);
+      rvmTensor.dispose && rvmTensor.dispose();
+      if (!isMaskDegenerate(c2)) return c2;
+      if (!fallback) fallback = c2;
+    }
+
+    return fallback; // 완전 실패면 null, 아쉬운 결과라도 있으면 그거라도 반환
+  }
+
+  // ---- file intake ----
+  dropzone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+  });
+  ['dragenter','dragover'].forEach(evt => dropzone.addEventListener(evt, e => {
+    e.preventDefault(); dropzone.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+  }));
+  dropzone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+  window.addEventListener('paste', e => {
+    if (workspace.classList.contains('active')) return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const it of items) {
+      if (it.type && it.type.startsWith('image/')) {
+        const f = it.getAsFile();
+        if (f) handleFile(f);
+        break;
+      }
+    }
+  });
+
+  function handleFile(file){
+    if (!file.type || !file.type.startsWith('image/')) {
+      showError('이미지 파일만 올릴 수 있어요 (JPG, PNG, WEBP 등).');
+      return;
+    }
+    clearError();
+    const reader = new FileReader();
+    reader.onload = e => loadImage(e.target.result);
+    reader.onerror = () => showError('파일을 읽는 중 문제가 생겼어요. 다시 시도해주세요.');
+    reader.readAsDataURL(file);
+  }
+
+  function loadImage(dataUrl){
+    const img = new Image();
+    img.onload = () => startProcessing(img);
+    img.onerror = () => showError('이미지를 열 수 없어요. 다른 파일로 시도해주세요.');
+    img.src = dataUrl;
+  }
+
+  // ---- processing ----
+  async function startProcessing(img){
+    dropzone.style.display = 'none';
+    workspace.classList.add('active');
+    scanOverlay.classList.add('active');
+    downloadBtn.disabled = true;
+    scanMsg.textContent = '모델을 불러오는 중…';
+    clearError();
+
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const scale = Math.min(1, MAX_DIM / Math.max(w, h));
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+
+    originalCanvasEl = document.createElement('canvas');
+    originalCanvasEl.width = w; originalCanvasEl.height = h;
+    originalCanvasEl.getContext('2d').drawImage(img, 0, 0, w, h);
+
+    beforeImg.src = originalCanvasEl.toDataURL('image/jpeg', 0.95);
+    resultCanvas.width = w; resultCanvas.height = h;
+    retouchCanvas.width = w; retouchCanvas.height = h;
+    lassoOverlay.width = w; lassoOverlay.height = h;
+    zoomInitDone = false;
+    resetHandle();
+    undoStack = [];
+    undoBtn.disabled = true;
+
+    let aiSucceeded = false;
+    let degenerate = false;
+    let failReason = '';
+
+    try {
+      const H = await getHuman();
+      scanMsg.textContent = '배경을 도려내는 중…';
+      const segCanvas = await runSegmentation(H, originalCanvasEl, w, h);
+      if (!segCanvas) {
+        const diag = await testModelAccess();
+        throw new Error((lastSegError ? lastSegError + ' / ' : '') + '모델파일 접근 테스트 → ' + diag);
+      }
+      const rctx = resultCanvas.getContext('2d');
+      rctx.clearRect(0, 0, w, h);
+      rctx.drawImage(segCanvas, 0, 0);
+      aiSucceeded = true;
+      degenerate = isMaskDegenerate(resultCanvas);
+    } catch (err) {
+      console.error(err);
+      failReason = (err && err.message) ? err.message : String(err);
+      // AI가 실패해도 작업을 이어갈 수 있도록, 원본 이미지를 그대로 캔버스에 올려둔다.
+      const rctx = resultCanvas.getContext('2d');
+      rctx.clearRect(0, 0, w, h);
+      rctx.drawImage(originalCanvasEl, 0, 0, w, h);
+    }
+
+    retouchCanvas.getContext('2d').clearRect(0, 0, w, h);
+    retouchCanvas.getContext('2d').drawImage(resultCanvas, 0, 0);
+    aiResultDataUrl = resultCanvas.toDataURL('image/png');
+
+    scanOverlay.classList.remove('active');
+    refreshDownload();
+
+    if (aiSucceeded && !degenerate) {
+      hint.textContent = '슬라이더를 좌우로 끌어서 전/후를 비교해보세요. 아쉬운 부분은 "다듬기" 탭에서 브러시로 정리할 수 있어요.';
+      switchTab('compare');
+    } else if (aiSucceeded && degenerate) {
+      showError('⚠️ 이 사진에서는 배경을 뚜렷하게 구분하지 못한 것 같아요. "다듬기" 탭에서 지우개 브러시로 배경을 직접 지워보세요.', true);
+      switchTab('retouch');
+      setBrushMode('erase');
+    } else {
+      const detail = failReason ? ` (상세: ${failReason})` : '';
+      showError('AI가 자동으로 배경을 지우지 못했어요. 대신 원본 사진을 그대로 올려뒀으니, "다듬기" 탭의 지우개 브러시로 배경을 직접 지워보세요.' + detail, true);
+      switchTab('retouch');
+      setBrushMode('erase');
+    }
+  }
+
+  async function tensorToCanvas(H, tensor, canvas, w, h){
+    const squeezed = tensor.shape.length === 4 ? tensor.squeeze([0]) : tensor;
+    const data = await squeezed.data();
+    if (squeezed !== tensor) squeezed.dispose();
+
+    const clamped = new Uint8ClampedArray(w * h * 4);
+    for (let i = 0; i < clamped.length; i++) clamped[i] = data[i];
+    const imageData = new ImageData(clamped, w, h);
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').putImageData(imageData, 0, 0);
+  }
+
+  // 알파 채널이 거의 전부 0(다 지워짐) 또는 거의 전부 255(하나도 안 지워짐)면
+  // 인식이 사실상 실패한 것으로 보고 사용자에게 알려준다.
+  function isMaskDegenerate(canvas){
+    const ctx = canvas.getContext('2d');
+    const { width, height } = canvas;
+    const sampleStep = Math.max(1, Math.floor((width * height) / 4000));
+    const data = ctx.getImageData(0, 0, width, height).data;
+    let opaque = 0, transparent = 0, total = 0;
+    for (let i = 0; i < data.length; i += 4 * sampleStep) {
+      const a = data[i + 3];
+      if (a > 250) opaque++;
+      else if (a < 5) transparent++;
+      total++;
+    }
+    if (total === 0) return false;
+    return (opaque / total) > 0.985 || (transparent / total) > 0.985;
+  }
+
+  // ---- zoom / pan ----
+  function computeFitZoom(){
+    if (!retouchCanvas.width) return 1;
+    const maxW = retouchWrap.clientWidth || 300;
+    const maxH = retouchWrap.clientHeight || Math.round(window.innerHeight * 0.6);
+    return Math.max(0.05, Math.min(1, maxW / retouchCanvas.width, maxH / retouchCanvas.height));
+  }
+  function applyZoomStyle(){
+    const dw = Math.max(1, Math.round(retouchCanvas.width * zoomLevel));
+    const dh = Math.max(1, Math.round(retouchCanvas.height * zoomLevel));
+    retouchCanvas.style.width = dw + 'px';
+    retouchCanvas.style.height = dh + 'px';
+    lassoOverlay.style.width = dw + 'px';
+    lassoOverlay.style.height = dh + 'px';
+    zoomLabel.textContent = Math.round(zoomLevel * 100) + '%';
+  }
+  function setZoom(z){
+    zoomLevel = Math.max(0.1, Math.min(8, z));
+    applyZoomStyle();
+  }
+  zoomInBtn.addEventListener('click', () => setZoom(zoomLevel * 1.3));
+  zoomOutBtn.addEventListener('click', () => setZoom(zoomLevel / 1.3));
+  zoomFitBtn.addEventListener('click', () => setZoom(computeFitZoom()));
+
+  retouchWrap.addEventListener('wheel', e => {
+    if (!retouchCanvas.width) return;
+    e.preventDefault();
+    const rect = retouchWrap.getBoundingClientRect();
+    const beforeW = retouchCanvas.width * zoomLevel;
+    const beforeH = retouchCanvas.height * zoomLevel;
+    const anchorX = (retouchWrap.scrollLeft + (e.clientX - rect.left)) / beforeW;
+    const anchorY = (retouchWrap.scrollTop + (e.clientY - rect.top)) / beforeH;
+    setZoom(zoomLevel * (e.deltaY < 0 ? 1.12 : 1 / 1.12));
+    const afterW = retouchCanvas.width * zoomLevel;
+    const afterH = retouchCanvas.height * zoomLevel;
+    retouchWrap.scrollLeft = anchorX * afterW - (e.clientX - rect.left);
+    retouchWrap.scrollTop = anchorY * afterH - (e.clientY - rect.top);
+  }, { passive: false });
+
+  // ---- compare handle ----
+  function resetHandle(){
+    handle.style.left = '50%';
+    resultCanvas.style.clipPath = 'inset(0 50% 0 0)';
+    beforeImg.style.clipPath = 'inset(0 0 0 50%)';
+  }
+  let dragging = false;
+  handle.addEventListener('pointerdown', e => { dragging = true; e.target.setPointerCapture(e.pointerId); });
+  window.addEventListener('pointerup', () => dragging = false);
+  compare.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const rect = compare.getBoundingClientRect();
+    let pct = ((e.clientX - rect.left) / rect.width) * 100;
+    pct = Math.max(0, Math.min(100, pct));
+    handle.style.left = pct + '%';
+    resultCanvas.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+    beforeImg.style.clipPath = `inset(0 0 0 ${pct}%)`;
+  });
+
+  // ---- tabs ----
+  function switchTab(name){
+    if (name === 'compare') {
+      tabCompare.classList.add('active');
+      tabRetouch.classList.remove('active');
+      compare.style.display = 'block';
+      retouchWrap.style.display = 'none';
+      brushBar.style.display = 'none';
+      // 다듬기 탭에서 편집한 내용을 비교 탭에도 반영
+      if (retouchCanvas.width > 0) {
+        const ctx = resultCanvas.getContext('2d');
+        resultCanvas.width = retouchCanvas.width;
+        resultCanvas.height = retouchCanvas.height;
+        ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+        ctx.drawImage(retouchCanvas, 0, 0);
+      }
+    } else {
+      tabRetouch.classList.add('active');
+      tabCompare.classList.remove('active');
+      compare.style.display = 'none';
+      retouchWrap.style.display = 'block';
+      brushBar.style.display = 'flex';
+      if (!zoomInitDone && retouchCanvas.width) {
+        setZoom(computeFitZoom());
+        zoomInitDone = true;
+      }
+    }
+  }
+  tabCompare.addEventListener('click', () => switchTab('compare'));
+  tabRetouch.addEventListener('click', () => switchTab('retouch'));
+
+  // ---- brush ----
+  function setBrushMode(mode){
+    brushMode = mode;
+    if (panMode) setPanMode(false);
+    modeEraseBtn.classList.toggle('active', mode === 'erase');
+    modeRestoreBtn.classList.toggle('active', mode === 'restore');
+    modeLassoBtn.classList.toggle('active', mode === 'lasso');
+    brushCursor.classList.toggle('restore', mode === 'restore');
+    brushCursor.classList.toggle('lasso', mode === 'lasso');
+    sizeRow.style.display = (mode === 'lasso') ? 'none' : 'flex';
+    retouchHint.style.display = (mode === 'lasso') ? 'block' : 'none';
+    retouchCanvas.style.cursor = (mode === 'lasso') ? 'crosshair' : 'none';
+    // 도구를 바꾸면 진행 중이던 올가미 선택은 취소
+    if (lassoActive) {
+      lassoActive = false;
+      lassoPoints = [];
+      lassoOverlay.getContext('2d').clearRect(0, 0, lassoOverlay.width, lassoOverlay.height);
+    }
+  }
+  modeEraseBtn.addEventListener('click', () => setBrushMode('erase'));
+  modeRestoreBtn.addEventListener('click', () => setBrushMode('restore'));
+  modeLassoBtn.addEventListener('click', () => setBrushMode('lasso'));
+
+  function canvasScale(){
+    const rect = retouchCanvas.getBoundingClientRect();
+    return {
+      x: retouchCanvas.width / rect.width,
+      y: retouchCanvas.height / rect.height,
+      rect,
+    };
+  }
+
+  function stampAt(x, y, radius){
+    const ctx = retouchCanvas.getContext('2d');
+    ctx.save();
+    if (brushMode === 'erase') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.clip();
+      if (originalCanvasEl) ctx.drawImage(originalCanvasEl, 0, 0);
+    }
+    ctx.restore();
+  }
+
+  let painting = false;
+  let lastPt = null;
+
+  function toCanvasPt(e){
+    const { x: sx, y: sy, rect } = canvasScale();
+    return {
+      x: (e.clientX - rect.left) * sx,
+      y: (e.clientY - rect.top) * sy,
+    };
+  }
+
+  function paintStroke(pt, radius){
+    if (!lastPt) { stampAt(pt.x, pt.y, radius); lastPt = pt; return; }
+    const dist = Math.hypot(pt.x - lastPt.x, pt.y - lastPt.y);
+    const spacing = Math.max(2, radius / 3);
+    const steps = Math.max(1, Math.ceil(dist / spacing));
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      stampAt(lastPt.x + (pt.x - lastPt.x) * t, lastPt.y + (pt.y - lastPt.y) * t, radius);
+    }
+    lastPt = pt;
+  }
+
+  function drawLassoPreview(){
+    const ctx = lassoOverlay.getContext('2d');
+    ctx.clearRect(0, 0, lassoOverlay.width, lassoOverlay.height);
+    if (lassoPoints.length < 2) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(79,209,197,0.95)';
+    ctx.fillStyle = 'rgba(79,209,197,0.15)';
+    ctx.lineWidth = Math.max(1, 2 / zoomLevel);
+    ctx.setLineDash([6 / zoomLevel, 4 / zoomLevel]);
+    ctx.beginPath();
+    ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+    for (let i = 1; i < lassoPoints.length; i++) ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function applyLasso(){
+    lassoOverlay.getContext('2d').clearRect(0, 0, lassoOverlay.width, lassoOverlay.height);
+    if (lassoPoints.length < 3) { lassoPoints = []; return; }
+    const ctx = retouchCanvas.getContext('2d');
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+    for (let i = 1; i < lassoPoints.length; i++) ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+    ctx.closePath();
+    ctx.clip();
+    if (originalCanvasEl) ctx.drawImage(originalCanvasEl, 0, 0);
+    ctx.restore();
+    lassoPoints = [];
+    refreshDownload();
+  }
+
+  function setPanMode(on){
+    panMode = on;
+    panToggleBtn.classList.toggle('active', on);
+    retouchCanvas.classList.toggle('pan-mode', on);
+    brushCursor.style.display = on ? 'none' : brushCursor.style.display;
+  }
+  panToggleBtn.addEventListener('click', () => setPanMode(!panMode));
+
+  retouchCanvas.addEventListener('pointerdown', e => {
+    if (!retouchCanvas.width || panMode) return;
+    const pt = toCanvasPt(e);
+    if (brushMode === 'lasso') {
+      pushUndo();
+      lassoActive = true;
+      lassoPoints = [pt];
+      retouchCanvas.setPointerCapture(e.pointerId);
+      return;
+    }
+    painting = true;
+    lastPt = null;
+    pushUndo();
+    const radius = Number(brushSizeInput.value) / 2 * canvasScale().x;
+    stampAt(pt.x, pt.y, radius);
+    lastPt = pt;
+    retouchCanvas.setPointerCapture(e.pointerId);
+  });
+  retouchCanvas.addEventListener('pointermove', e => {
+    if (!retouchCanvas.width || panMode) return;
+    const wrapRect = canvasWrap.getBoundingClientRect();
+    if (brushMode !== 'lasso') {
+      const cssRadius = Number(brushSizeInput.value) / 2;
+      brushCursor.style.display = 'block';
+      brushCursor.style.width = (cssRadius * 2) + 'px';
+      brushCursor.style.height = (cssRadius * 2) + 'px';
+      brushCursor.style.left = (e.clientX - wrapRect.left) + 'px';
+      brushCursor.style.top = (e.clientY - wrapRect.top) + 'px';
+    } else {
+      brushCursor.style.display = 'none';
+    }
+    if (brushMode === 'lasso') {
+      if (!lassoActive) return;
+      const pt = toCanvasPt(e);
+      const last = lassoPoints[lassoPoints.length - 1];
+      if (!last || Math.hypot(pt.x - last.x, pt.y - last.y) > 3 / zoomLevel) {
+        lassoPoints.push(pt);
+        drawLassoPreview();
+      }
+      return;
+    }
+    if (!painting) return;
+    const { x: sx } = canvasScale();
+    const pt = toCanvasPt(e);
+    const radius = Number(brushSizeInput.value) / 2 * sx;
+    paintStroke(pt, radius);
+  });
+  function endStroke(){
+    if (brushMode === 'lasso') {
+      if (lassoActive) { lassoActive = false; applyLasso(); }
+      return;
+    }
+    if (!painting) return;
+    painting = false;
+    lastPt = null;
+    refreshDownload();
+  }
+  retouchCanvas.addEventListener('pointerup', endStroke);
+  retouchCanvas.addEventListener('pointerleave', () => {
+    brushCursor.style.display = 'none';
+    if (brushMode !== 'lasso') endStroke();
+  });
+  retouchCanvas.addEventListener('pointercancel', endStroke);
+
+  function pushUndo(){
+    try {
+      const ctx = retouchCanvas.getContext('2d');
+      const snap = ctx.getImageData(0, 0, retouchCanvas.width, retouchCanvas.height);
+      undoStack.push(snap);
+      if (undoStack.length > 12) undoStack.shift();
+      undoBtn.disabled = false;
+    } catch (e) { /* ignore */ }
+  }
+  undoBtn.addEventListener('click', () => {
+    const snap = undoStack.pop();
+    if (!snap) return;
+    retouchCanvas.getContext('2d').putImageData(snap, 0, 0);
+    if (undoStack.length === 0) undoBtn.disabled = true;
+    refreshDownload();
+  });
+
+  resetAIBtn.addEventListener('click', () => {
+    if (!aiResultDataUrl) return;
+    pushUndo();
+    const img = new Image();
+    img.onload = () => {
+      const ctx = retouchCanvas.getContext('2d');
+      ctx.clearRect(0, 0, retouchCanvas.width, retouchCanvas.height);
+      ctx.drawImage(img, 0, 0, retouchCanvas.width, retouchCanvas.height);
+      refreshDownload();
+    };
+    img.src = aiResultDataUrl;
+  });
+
+  brushSizeInput.addEventListener('input', () => {
+    const cssRadius = Number(brushSizeInput.value) / 2;
+    brushCursor.style.width = (cssRadius * 2) + 'px';
+    brushCursor.style.height = (cssRadius * 2) + 'px';
+  });
+
+  function smoothEdges(){
+    if (!retouchCanvas.width) return;
+    pushUndo();
+    const w = retouchCanvas.width, h = retouchCanvas.height;
+    const ctx = retouchCanvas.getContext('2d');
+    const src = ctx.getImageData(0, 0, w, h);
+
+    // 알파 채널만 따로 뽑아 살짝 블러를 준 뒤(경계를 부드럽게), 색상은 그대로 두고 알파만 교체한다.
+    // 이렇게 하면 브러시로 지운 경계나 올가미 경계의 "계단 현상/끊긴 느낌"이 매끄러운 곡선처럼 보인다.
+    const alphaCanvas = document.createElement('canvas');
+    alphaCanvas.width = w; alphaCanvas.height = h;
+    const actx = alphaCanvas.getContext('2d');
+    const alphaData = actx.createImageData(w, h);
+    for (let i = 0; i < w * h; i++) {
+      const a = src.data[i * 4 + 3];
+      alphaData.data[i * 4] = a;
+      alphaData.data[i * 4 + 1] = a;
+      alphaData.data[i * 4 + 2] = a;
+      alphaData.data[i * 4 + 3] = 255;
+    }
+    actx.putImageData(alphaData, 0, 0);
+
+    const blurCanvas = document.createElement('canvas');
+    blurCanvas.width = w; blurCanvas.height = h;
+    const bctx = blurCanvas.getContext('2d');
+    if ('filter' in bctx) {
+      bctx.filter = 'blur(1.4px)';
+      bctx.drawImage(alphaCanvas, 0, 0);
+    } else {
+      bctx.drawImage(alphaCanvas, 0, 0); // filter 미지원 브라우저 대비 폴백
+    }
+    const blurred = bctx.getImageData(0, 0, w, h);
+
+    for (let i = 0; i < w * h; i++) {
+      src.data[i * 4 + 3] = blurred.data[i * 4];
+    }
+    ctx.putImageData(src, 0, 0);
+    refreshDownload();
+  }
+  smoothBtn.addEventListener('click', smoothEdges);
+
+  // ---- download / reset ----
+  function refreshDownload(){
+    const src = retouchCanvas.width ? retouchCanvas : resultCanvas;
+    src.toBlob(blob => {
+      if (!blob) return;
+      if (resultBlobUrl) URL.revokeObjectURL(resultBlobUrl);
+      resultBlobUrl = URL.createObjectURL(blob);
+      downloadBtn.disabled = false;
+    }, 'image/png');
+  }
+
+  downloadBtn.addEventListener('click', () => {
+    const src = retouchCanvas.width ? retouchCanvas : resultCanvas;
+    src.toBlob(blob => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'nukki-result.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }, 'image/png');
+  });
+
+  resetBtn.addEventListener('click', () => {
+    workspace.classList.remove('active');
+    dropzone.style.display = 'flex';
+    fileInput.value = '';
+    clearError();
+    downloadBtn.disabled = true;
+    switchTab('compare');
+  });
+})();
+</script>
+</body>
+</html>
