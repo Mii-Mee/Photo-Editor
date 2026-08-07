@@ -23,6 +23,7 @@
   }
   form{
     display:flex;
+    flex-direction:column;
     gap:8px;
     background:var(--panel);
     border:1px solid var(--line);
@@ -30,8 +31,20 @@
     border-radius:10px;
     box-shadow:0 12px 40px rgba(0,0,0,.4);
   }
+  .row{display:flex;gap:8px;}
+  select{
+    padding:12px 14px;
+    background:#262626;
+    border:1px solid var(--line);
+    color:var(--text-hi);
+    border-radius:7px;
+    font-size:14px;
+    outline:none;
+    cursor:pointer;
+  }
+  select:focus{border-color:var(--accent);}
   input{
-    width:260px;
+    width:100%;
     padding:12px 14px;
     background:#262626;
     border:1px solid var(--line);
@@ -59,17 +72,34 @@
 <body>
 
   <form id="goForm">
+    <div class="row">
+      <select id="presetSelect">
+        <option value="__custom__">직접입력</option>
+        <option value="photo-editor">photo-editor</option>
+        <option value="psd-viewer">psd-viewer</option>
+        <option value="nuki-studio">nuki-studio</option>
+      </select>
+      <button type="submit">이동</button>
+    </div>
     <input id="filenameInput" type="text" placeholder="파일명" autocomplete="off" autofocus>
-    <button type="submit">이동</button>
   </form>
 
 <script>
   const form = document.getElementById('goForm');
+  const select = document.getElementById('presetSelect');
   const input = document.getElementById('filenameInput');
+
+  function syncInputVisibility(){
+    const isCustom = select.value === '__custom__';
+    input.style.display = isCustom ? 'block' : 'none';
+    if (isCustom) input.focus();
+  }
+  select.addEventListener('change', syncInputVisibility);
+  syncInputVisibility();
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    let name = input.value.trim();
+    let name = select.value === '__custom__' ? input.value.trim() : select.value;
     if (!name) { input.focus(); return; }
 
     // 이미 .html로 끝나면 중복으로 붙이지 않음
