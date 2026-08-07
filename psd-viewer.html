@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSD Viewer — Darkroom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#121214;
+    --panel:#19191d;
+    --panel-raised:#1f1f24;
+    --line:#2b2b31;
+    --paper:#ecebe6;
+    --muted:#8b8b93;
+    --amber:#e8a33d;
+    --amber-dim:#5c421f;
+    --red:#d6553f;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-ui:'Inter',sans-serif;
+    --font-mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--ink);color:var(--paper);font-family:var(--font-ui);overflow:hidden;}
+
+  .app{display:flex;flex-direction:column;height:100vh;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:14px;
+    height:52px;flex:0 0 auto;padding:0 18px;
+    background:var(--panel);border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex;align-items:center;gap:9px;}
+  .brand .mark{
+    width:20px;height:20px;border-radius:3px;
+    background:var(--amber);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-size:10px;font-weight:700;color:#171308;
+    flex:0 0 auto;
+  }
+  .brand span{font-family:var(--font-display);font-weight:600;font-size:15px;letter-spacing:0.01em;}
+  .brand small{font-family:var(--font-mono);color:var(--muted);font-size:11px;margin-left:6px;}
+  .topbar .spacer{flex:1;}
+  .btn{
+    appearance:none;border:1px solid var(--line);background:var(--panel-raised);
+    color:var(--paper);font-family:var(--font-ui);font-size:13px;font-weight:500;
+    padding:7px 13px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .btn:hover{border-color:var(--amber);}
+  .btn.primary{background:var(--amber);color:#1a1305;border-color:var(--amber);font-weight:600;}
+  .btn.primary:hover{background:#f0ad4d;}
+  .file-meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);display:none;align-items:center;gap:10px;}
+  .file-meta b{color:var(--paper);font-weight:500;}
+  .dot{width:4px;height:4px;border-radius:50%;background:var(--line);}
+
+  /* ---------- Workspace ---------- */
+  .workspace{flex:1;display:flex;min-height:0;}
+
+  .stage{
+    flex:1;position:relative;display:flex;flex-direction:column;min-width:0;
+    background:var(--ink);
+  }
+  .stage-toolbar{
+    height:38px;flex:0 0 auto;display:flex;align-items:center;gap:6px;
+    padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel);
+  }
+  .zoom-btn{
+    width:26px;height:26px;border-radius:5px;border:1px solid var(--line);background:transparent;
+    color:var(--muted);cursor:pointer;font-family:var(--font-mono);font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .zoom-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .zoom-readout{font-family:var(--font-mono);font-size:12px;color:var(--muted);width:46px;text-align:center;}
+  .stage-toolbar .sep{width:1px;height:18px;background:var(--line);margin:0 4px;}
+
+  .canvas-scroll{
+    flex:1;overflow:auto;
+    display:flex;align-items:flex-start;justify-content:flex-start;
+    padding:40px;
+  }
+  .canvas-scroll.centered{align-items:center;justify-content:center;}
+
+  .doc-frame{
+    position:relative;flex:0 0 auto;
+    background-image:
+      linear-gradient(45deg,#232327 25%,transparent 25%),
+      linear-gradient(-45deg,#232327 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#232327 75%),
+      linear-gradient(-45deg,transparent 75%,#232327 75%);
+    background-size:20px 20px;
+    background-position:0 0,0 10px,10px -10px,-10px 0px;
+    background-color:#18181b;
+    box-shadow:0 0 0 1px var(--line), 0 20px 50px -20px rgba(0,0,0,.7);
+  }
+  .doc-frame canvas{display:block;image-rendering:pixelated;user-select:none;pointer-events:none;}
+  .layer-box{
+    position:absolute;border:1.5px dashed var(--amber);
+    pointer-events:none;
+    background:rgba(232,163,61,0.07);
+  }
+  .layer-box .tag{
+    position:absolute;top:-20px;left:-1.5px;
+    background:var(--amber);color:#1a1305;
+    font-family:var(--font-mono);font-size:10px;font-weight:600;
+    padding:2px 5px;border-radius:3px;white-space:nowrap;
+  }
+
+  /* ---------- Empty state ---------- */
+  .empty{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    text-align:center;padding:40px;
+  }
+  .empty.dragover{background:rgba(232,163,61,0.05);}
+  .empty .icon{
+    width:64px;height:64px;border-radius:14px;border:1.5px dashed var(--line);
+    display:flex;align-items:center;justify-content:center;color:var(--muted);
+  }
+  .empty h1{font-family:var(--font-display);font-size:20px;font-weight:600;margin:0;}
+  .empty p{color:var(--muted);font-size:13.5px;max-width:340px;line-height:1.55;margin:0;}
+  .empty .hint{font-family:var(--font-mono);font-size:11.5px;color:#5c5c64;}
+
+  /* ---------- Loading / error / notice ---------- */
+  .status-overlay{
+    position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+    background:rgba(18,18,20,0.88);flex-direction:column;gap:14px;z-index:20;padding:30px;
+  }
+  .status-overlay.show{display:flex;}
+  .spinner{
+    width:28px;height:28px;border-radius:50%;
+    border:2.5px solid var(--line);border-top-color:var(--amber);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .status-overlay .msg{font-family:var(--font-mono);font-size:12.5px;color:var(--muted);}
+  .status-overlay .err{color:var(--red);font-family:var(--font-ui);font-size:13.5px;max-width:340px;text-align:center;}
+  .status-overlay .err b{display:block;font-family:var(--font-display);font-size:15px;color:var(--paper);margin-bottom:6px;font-weight:600;}
+  .notice-banner{
+    position:absolute;top:12px;left:50%;transform:translateX(-50%);
+    background:var(--panel-raised);border:1px solid var(--line);border-left:3px solid var(--amber);
+    padding:9px 14px;border-radius:6px;font-size:12.5px;color:var(--paper);
+    display:none;align-items:center;gap:8px;z-index:15;max-width:70%;
+  }
+  .notice-banner.show{display:flex;}
+
+  /* ---------- Layers panel ---------- */
+  .layers-panel{
+    width:300px;flex:0 0 auto;border-left:1px solid var(--line);background:var(--panel);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .layers-panel .panel-head{
+    height:38px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    padding:0 14px;border-bottom:1px solid var(--line);
+  }
+  .layers-panel .panel-head span{font-family:var(--font-mono);font-size:11px;letter-spacing:0.12em;color:var(--muted);}
+  .layers-panel .panel-head .count{font-family:var(--font-mono);font-size:11px;color:var(--amber);}
+
+  .layer-tree{flex:1;overflow:auto;padding:6px 0;}
+  .layer-empty{padding:20px 16px;font-size:12.5px;color:var(--muted);line-height:1.6;}
+  .layer-row{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 10px;cursor:pointer;border-left:2px solid transparent;
+    font-size:12.5px;
+  }
+  .layer-row:hover{background:var(--panel-raised);}
+  .layer-row.selected{background:var(--amber-dim);border-left-color:var(--amber);}
+  .layer-row .twirl{
+    width:14px;height:14px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    color:var(--muted);cursor:pointer;font-size:9px;transition:transform .1s ease;
+  }
+  .layer-row .twirl.collapsed{transform:rotate(-90deg);}
+  .layer-row .twirl.leaf{visibility:hidden;}
+  .layer-row .eye{
+    width:16px;height:16px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    color:var(--amber);
+  }
+  .layer-row .eye.hidden-layer{color:#3c3c42;}
+  .layer-row .type-icon{flex:0 0 auto;color:var(--muted);display:flex;align-items:center;}
+  .layer-row .name{
+    flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:var(--paper);
+  }
+  .layer-row.group-row .name{font-weight:600;}
+  .layer-row .opacity{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);flex:0 0 auto;}
+  .children-wrap.collapsed{display:none;}
+
+  .layer-preview{
+    flex:0 0 auto;border-top:1px solid var(--line);padding:12px 14px 14px;
+    display:none;
+  }
+  .layer-preview.show{display:block;}
+  .layer-preview .lp-label{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);letter-spacing:0.08em;margin-bottom:8px;}
+  .layer-preview .lp-frame{
+    width:100%;height:110px;border-radius:6px;border:1px solid var(--line);
+    background-image:
+      linear-gradient(45deg,#232327 25%,transparent 25%),
+      linear-gradient(-45deg,#232327 25%,transparent 25%),
+      linear-gradient(45deg,transparent 75%,#232327 75%),
+      linear-gradient(-45deg,transparent 75%,#232327 75%);
+    background-size:14px 14px;
+    background-position:0 0,0 7px,7px -7px,-7px 0px;
+    background-color:#18181b;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  .layer-preview .lp-frame canvas{max-width:100%;max-height:100%;image-rendering:pixelated;}
+  .layer-preview .lp-frame .none{font-family:var(--font-mono);font-size:11px;color:#5c5c64;}
+  .layer-preview .lp-meta{margin-top:8px;font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.7;}
+  .layer-preview .lp-meta b{color:var(--paper);font-weight:500;}
+
+  /* ---------- Footer ---------- */
+  .statusbar{
+    height:26px;flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:0 16px;
+    background:var(--panel);border-top:1px solid var(--line);
+    font-family:var(--font-mono);font-size:11px;color:var(--muted);
+  }
+
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#2c2c32;border-radius:6px;border:2px solid var(--panel);}
+  ::-webkit-scrollbar-thumb:hover{background:#3a3a42;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">Ps</div>
+      <span>Darkroom</span>
+      <small>PSD VIEWER</small>
+    </div>
+    <div class="file-meta" id="fileMeta">
+      <span id="metaName"></span>
+      <div class="dot"></div>
+      <span id="metaDims"></span>
+      <div class="dot"></div>
+      <span id="metaMode"></span>
+      <div class="dot"></div>
+      <span id="metaSize"></span>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="closeBtn" style="display:none;">닫기</button>
+    <button class="btn primary" id="openBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      PSD 파일 열기
+    </button>
+  </div>
+
+  <div class="workspace">
+
+    <div class="stage" id="stage">
+
+      <div class="stage-toolbar" id="stageToolbar" style="display:none;">
+        <button class="zoom-btn" id="zoomOut">−</button>
+        <div class="zoom-readout" id="zoomReadout">100%</div>
+        <button class="zoom-btn" id="zoomIn">+</button>
+        <div class="sep"></div>
+        <button class="btn" id="fitBtn" style="padding:5px 10px;font-size:12px;">화면에 맞춤</button>
+        <button class="btn" id="oneToOneBtn" style="padding:5px 10px;font-size:12px;">100%</button>
+      </div>
+
+      <div class="notice-banner" id="noticeBanner"></div>
+
+      <div class="canvas-scroll centered" id="canvasScroll">
+        <div class="empty" id="emptyState">
+          <div class="icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <h1>PSD 파일을 열어보세요</h1>
+          <p>파일을 이 영역에 끌어다 놓거나, 위의 버튼을 눌러 .psd 파일을 선택하세요. 합성 이미지와 레이어 구조를 브라우저에서 바로 확인할 수 있습니다.</p>
+          <div class="hint">모든 처리는 브라우저 안에서 이루어지며, 파일은 서버로 전송되지 않습니다. (외부 라이브러리도 사용하지 않아요)</div>
+        </div>
+      </div>
+
+      <div class="status-overlay" id="statusOverlay">
+        <div class="spinner" id="spinner"></div>
+        <div class="msg" id="statusMsg">PSD 파싱 중…</div>
+      </div>
+
+    </div>
+
+    <div class="layers-panel" id="layersPanel" style="display:none;">
+      <div class="panel-head">
+        <span>LAYERS</span>
+        <span class="count" id="layerCount">0</span>
+      </div>
+      <div class="layer-tree" id="layerTree"></div>
+      <div class="layer-preview" id="layerPreview">
+        <div class="lp-label">SELECTED LAYER</div>
+        <div class="lp-frame" id="lpFrame"><span class="none">미리보기 없음</span></div>
+        <div class="lp-meta" id="lpMeta"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="statusbar">
+    <span id="sbLeft">파일을 기다리는 중…</span>
+  </div>
+
+</div>
+
+<input type="file" id="fileInput" accept=".psd" style="display:none;">
+
+<script>
+// ======================================================================
+// Minimal dependency-free PSD parser.
+// Supports 8-bit RGB / CMYK / Grayscale, Raw & RLE compression,
+// layer tree (including nested groups via lsct/lsdk), unicode names.
+// ======================================================================
+const PSDParser = (function(){
+
+  function makeReader(arrayBuffer){
+    const dv = new DataView(arrayBuffer);
+    let pos = 0;
+    return {
+      get pos(){ return pos; },
+      set pos(v){ pos = v; },
+      remaining(){ return dv.byteLength - pos; },
+      u8(){ const v = dv.getUint8(pos); pos += 1; return v; },
+      u16(){ const v = dv.getUint16(pos, false); pos += 2; return v; },
+      i16(){ const v = dv.getInt16(pos, false); pos += 2; return v; },
+      u32(){ const v = dv.getUint32(pos, false); pos += 4; return v; },
+      i32(){ const v = dv.getInt32(pos, false); pos += 4; return v; },
+      bytes(n){ const v = new Uint8Array(dv.buffer, dv.byteOffset + pos, n); pos += n; return v; },
+      skip(n){ pos += n; },
+      sig4(){ const b = this.bytes(4); return String.fromCharCode(b[0],b[1],b[2],b[3]); }
+    };
+  }
+
+  function decodeLatin1(bytes){
+    let s = '';
+    for(let i=0;i<bytes.length;i++) s += String.fromCharCode(bytes[i]);
+    return s;
+  }
+
+  function decodeUTF16BE(bytes, charCount){
+    let s = '';
+    for(let i=0;i<charCount;i++){
+      const code = (bytes[i*2] << 8) | bytes[i*2+1];
+      if(code === 0) continue; // trailing null terminator
+      s += String.fromCharCode(code);
+    }
+    return s;
+  }
+
+  function unpackRLE(src, expectedLen){
+    const out = new Uint8Array(expectedLen);
+    let si = 0, oi = 0;
+    while(oi < expectedLen && si < src.length){
+      let n = src[si++];
+      if(n > 127) n -= 256;
+      if(n === -128){
+        continue;
+      } else if(n >= 0){
+        const count = n + 1;
+        for(let k=0;k<count && oi<expectedLen && si<src.length;k++) out[oi++] = src[si++];
+      } else {
+        const count = 1 - n;
+        const val = src[si++];
+        for(let k=0;k<count && oi<expectedLen;k++) out[oi++] = val;
+      }
+    }
+    return out;
+  }
+
+  function decodeChannelPlane(reader, byteLength, width, height){
+    const endPos = reader.pos + byteLength;
+    if(byteLength < 2 || width === 0 || height === 0){
+      reader.pos = endPos;
+      return null;
+    }
+    const compression = reader.u16();
+    const pixelCount = width * height;
+    let plane = null;
+    if(compression === 0){
+      const need = Math.min(pixelCount, reader.remaining());
+      plane = reader.bytes(need).slice();
+      if(plane.length < pixelCount){
+        const padded = new Uint8Array(pixelCount);
+        padded.set(plane);
+        plane = padded;
+      }
+    } else if(compression === 1){
+      const rowCounts = new Array(height);
+      for(let r=0;r<height;r++) rowCounts[r] = reader.u16();
+      plane = new Uint8Array(pixelCount);
+      let outOff = 0;
+      for(let r=0;r<height;r++){
+        const rowBytes = reader.bytes(rowCounts[r]);
+        plane.set(unpackRLE(rowBytes, width), outOff);
+        outOff += width;
+      }
+    }
+    reader.pos = endPos; // always resync to the declared boundary, even on unsupported compression
+    return plane;
+  }
+
+  function planesToRGBA(planes, width, height, mode, hasAlpha){
+    const n = width * height;
+    if(n === 0) return null;
+    const out = new Uint8ClampedArray(n * 4);
+    if(mode === 3){
+      const R = planes[0], G = planes[1], B = planes[2], A = hasAlpha ? planes[-1] : null;
+      for(let i=0;i<n;i++){
+        out[i*4]   = R ? R[i] : 0;
+        out[i*4+1] = G ? G[i] : 0;
+        out[i*4+2] = B ? B[i] : 0;
+        out[i*4+3] = A ? A[i] : 255;
+      }
+    } else if(mode === 1){
+      const Gr = planes[0], A = hasAlpha ? planes[-1] : null;
+      for(let i=0;i<n;i++){
+        const v = Gr ? Gr[i] : 0;
+        out[i*4]=v; out[i*4+1]=v; out[i*4+2]=v; out[i*4+3] = A ? A[i] : 255;
+      }
+    } else if(mode === 4){
+      const C=planes[0],M=planes[1],Y=planes[2],K=planes[3], A = hasAlpha ? planes[-1] : null;
+      for(let i=0;i<n;i++){
+        const c=255-(C?C[i]:0), m=255-(M?M[i]:0), y=255-(Y?Y[i]:0), k=255-(K?K[i]:0);
+        out[i*4]   = 255 - Math.min(255, c + k);
+        out[i*4+1] = 255 - Math.min(255, m + k);
+        out[i*4+2] = 255 - Math.min(255, y + k);
+        out[i*4+3] = A ? A[i] : 255;
+      }
+    } else {
+      return null;
+    }
+    return out;
+  }
+
+  function parsePSD(arrayBuffer){
+    const r = makeReader(arrayBuffer);
+    const warnings = [];
+
+    const sig = r.sig4();
+    if(sig !== '8BPS') throw new Error('PSD 시그니처가 올바르지 않습니다.');
+    const version = r.u16();
+    r.skip(6);
+    const channels = r.u16();
+    const height = r.u32();
+    const width = r.u32();
+    const depth = r.u16();
+    const mode = r.u16();
+
+    if(version === 2) throw new Error('PSB(대용량 문서) 형식은 지원되지 않습니다.');
+
+    const colorModeLen = r.u32();
+    r.skip(colorModeLen);
+    const imgResLen = r.u32();
+    r.skip(imgResLen);
+
+    const lmiStart = r.pos;
+    const lmiLen = r.u32();
+    const lmiEnd = lmiStart + 4 + lmiLen;
+
+    let flatLayers = [];
+    try{
+      const layerInfoStart = r.pos;
+      const layerInfoLen = r.u32();
+      const layerInfoEnd = layerInfoStart + 4 + layerInfoLen;
+      let layerCount = r.i16();
+      layerCount = Math.abs(layerCount);
+
+      const records = [];
+      for(let li=0; li<layerCount; li++){
+        const rec = {};
+        rec.top = r.i32(); rec.left = r.i32(); rec.bottom = r.i32(); rec.right = r.i32();
+        rec.width = rec.right - rec.left;
+        rec.height = rec.bottom - rec.top;
+        const numChannels = r.u16();
+        rec.channelInfo = [];
+        for(let c=0;c<numChannels;c++){
+          const id = r.i16();
+          const len = r.u32();
+          rec.channelInfo.push({id, len});
+        }
+        r.sig4(); // blend signature '8BIM'
+        rec.blendMode = r.sig4();
+        rec.opacity = r.u8();
+        rec.clipping = r.u8();
+        const flags = r.u8();
+        rec.visible = (flags & 2) === 0;
+        r.skip(1);
+        const extraLen = r.u32();
+        const extraEnd = r.pos + extraLen;
+
+        const maskLen = r.u32();
+        r.skip(maskLen);
+        const blendRangesLen = r.u32();
+        r.skip(blendRangesLen);
+        const nameLen = r.u8();
+        const nameBytes = r.bytes(nameLen);
+        rec.name = decodeLatin1(nameBytes);
+        const consumed = 1 + nameLen;
+        r.skip((4 - (consumed % 4)) % 4);
+
+        rec.dividerType = 0;
+        while(r.pos < extraEnd - 8){
+          const infoSig = r.sig4();
+          if(infoSig !== '8BIM' && infoSig !== '8B64'){ break; }
+          const key = r.sig4();
+          const len2 = r.u32();
+          const dataStart = r.pos;
+          if(key === 'luni'){
+            const charCount = r.u32();
+            const bytes = r.bytes(Math.min(charCount*2, len2-4));
+            const name = decodeUTF16BE(bytes, Math.floor(bytes.length/2));
+            if(name) rec.name = name;
+          } else if(key === 'lsct' || key === 'lsdk'){
+            rec.dividerType = r.u32();
+          }
+          r.pos = dataStart + len2 + (len2 % 2);
+        }
+        r.pos = extraEnd;
+        records.push(rec);
+      }
+
+      for(let li=0; li<records.length; li++){
+        const rec = records[li];
+        rec.planes = {};
+        for(const ch of rec.channelInfo){
+          if(ch.id < -1){ r.skip(ch.len); continue; }
+          rec.planes[ch.id] = decodeChannelPlane(r, ch.len, rec.width, rec.height);
+        }
+      }
+
+      flatLayers = records;
+      r.pos = layerInfoEnd;
+    }catch(err){
+      warnings.push('레이어 정보를 완전히 해석하지 못했습니다. (' + err.message + ')');
+    }
+
+    r.pos = lmiEnd; // always resync using the outer, authoritative length
+
+    const root = { children: [] };
+    const stack = [root];
+    flatLayers.forEach(function(layer){
+      if(layer.dividerType === 3){
+        stack.push({ children: [] });
+      } else if(layer.dividerType === 1 || layer.dividerType === 2){
+        const popped = stack.pop() || { children: [] };
+        layer.children = popped.children;
+        layer.isGroup = true;
+        layer.opened = layer.dividerType === 1;
+        (stack[stack.length-1] || root).children.push(layer);
+      } else {
+        (stack[stack.length-1] || root).children.push(layer);
+      }
+    });
+
+    let composite = null;
+    try{
+      if(depth === 8 && r.remaining() >= 2){
+        const compression = r.u16();
+        const pixelCount = width*height;
+        const planes = {};
+        let ok = true;
+        if(compression === 0){
+          for(let c=0;c<channels;c++){
+            const need = Math.min(pixelCount, r.remaining());
+            planes[c] = r.bytes(need).slice();
+          }
+        } else if(compression === 1){
+          const rowCounts = [];
+          for(let c=0;c<channels;c++){
+            const rc = new Array(height);
+            for(let row=0; row<height; row++) rc[row] = r.u16();
+            rowCounts.push(rc);
+          }
+          for(let c=0;c<channels;c++){
+            const plane = new Uint8Array(pixelCount);
+            let off=0;
+            for(let row=0; row<height; row++){
+              const rowBytes = r.bytes(rowCounts[c][row]);
+              plane.set(unpackRLE(rowBytes, width), off);
+              off += width;
+            }
+            planes[c] = plane;
+          }
+        } else {
+          ok = false;
+          warnings.push('지원되지 않는 압축 방식(ZIP)이라 합성 이미지를 표시할 수 없습니다.');
+        }
+        if(ok){
+          const hasAlpha = channels > (mode===3?3:mode===1?1:mode===4?4:0);
+          if(hasAlpha) planes[-1] = planes[mode===3?3:mode===1?1:4];
+          const rgba = planesToRGBA(planes, width, height, mode, hasAlpha);
+          if(rgba) composite = { width, height, data: rgba };
+          else warnings.push('지원되지 않는 색상 모드라 합성 이미지를 표시할 수 없습니다. (mode=' + mode + ')');
+        }
+      } else if(depth !== 8){
+        warnings.push('이 파일은 ' + depth + '비트 이미지라 미리보기가 지원되지 않습니다.');
+      }
+    }catch(err){
+      warnings.push('합성 이미지를 해석하지 못했습니다. (' + err.message + ')');
+    }
+
+    return { width, height, channels, depth, mode, tree: root, composite, warnings };
+  }
+
+  return { parsePSD, planesToRGBA };
+})();
+
+// ======================================================================
+// App
+// ======================================================================
+(function(){
+  const $ = (id) => document.getElementById(id);
+
+  const openBtn = $('openBtn'), closeBtn = $('closeBtn'), fileInput = $('fileInput');
+  const stage = $('stage'), canvasScroll = $('canvasScroll'), emptyState = $('emptyState');
+  const statusOverlay = $('statusOverlay'), statusMsg = $('statusMsg'), spinner = $('spinner');
+  const stageToolbar = $('stageToolbar'), noticeBanner = $('noticeBanner');
+  const layersPanel = $('layersPanel'), layerTree = $('layerTree'), layerCount = $('layerCount');
+  const layerPreview = $('layerPreview'), lpFrame = $('lpFrame'), lpMeta = $('lpMeta');
+  const fileMeta = $('fileMeta'), metaName = $('metaName'), metaDims = $('metaDims'), metaSize = $('metaSize'), metaMode = $('metaMode');
+  const sbLeft = $('sbLeft');
+  const zoomOut = $('zoomOut'), zoomIn = $('zoomIn'), zoomReadout = $('zoomReadout');
+  const fitBtn = $('fitBtn'), oneToOneBtn = $('oneToOneBtn');
+
+  const MODE_LABEL = {0:'비트맵',1:'그레이스케일',2:'인덱스',3:'RGB',4:'CMYK',7:'멀티채널',8:'듀오톤',9:'Lab'};
+
+  let currentResult = null;
+  let docFrame = null;
+  let mainCanvas = null;
+  let docW = 0, docH = 0;
+  let zoom = 1;
+  let selectedBox = null;
+
+  function fmtBytes(n){
+    if(n < 1024) return n + ' B';
+    if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+    return (n/1024/1024).toFixed(2) + ' MB';
+  }
+
+  function resetUI(){
+    layerTree.innerHTML = '';
+    layerCount.textContent = '0';
+    layersPanel.style.display = 'none';
+    stageToolbar.style.display = 'none';
+    fileMeta.style.display = 'none';
+    closeBtn.style.display = 'none';
+    layerPreview.classList.remove('show');
+    noticeBanner.classList.remove('show');
+    canvasScroll.innerHTML = '';
+    canvasScroll.appendChild(emptyState);
+    canvasScroll.classList.add('centered');
+    emptyState.style.display = 'flex';
+    docFrame = null; mainCanvas = null; currentResult = null;
+    sbLeft.textContent = '파일을 기다리는 중…';
+    fileInput.value = '';
+  }
+
+  function showLoading(msg){
+    statusMsg.textContent = msg;
+    spinner.style.display = 'block';
+    const existingErr = statusOverlay.querySelector('.err');
+    if(existingErr) existingErr.remove();
+    statusOverlay.classList.add('show');
+  }
+  function hideLoading(){ statusOverlay.classList.remove('show'); }
+  function showError(title, detail){
+    spinner.style.display = 'none';
+    statusMsg.textContent = '';
+    let err = statusOverlay.querySelector('.err');
+    if(!err){ err = document.createElement('div'); err.className = 'err'; statusOverlay.appendChild(err); }
+    err.innerHTML = '<b>'+title+'</b>' + detail;
+    statusOverlay.classList.add('show');
+  }
+  function showNotice(text){
+    noticeBanner.textContent = '⚠ ' + text;
+    noticeBanner.classList.add('show');
+  }
+
+  openBtn.addEventListener('click', () => fileInput.click());
+  closeBtn.addEventListener('click', resetUI);
+  fileInput.addEventListener('change', (e) => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+
+  emptyState.addEventListener('dragover', (e) => { e.preventDefault(); emptyState.classList.add('dragover'); });
+  emptyState.addEventListener('dragleave', () => emptyState.classList.remove('dragover'));
+  emptyState.addEventListener('drop', (e) => {
+    e.preventDefault(); emptyState.classList.remove('dragover');
+    if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  stage.addEventListener('dragover', (e) => e.preventDefault());
+  stage.addEventListener('drop', (e) => { e.preventDefault(); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+  function handleFile(file){
+    if(!file.name.toLowerCase().endsWith('.psd')){
+      showLoading(''); showError('PSD 파일이 아닙니다', '<br>.psd 확장자를 가진 파일을 선택해 주세요.');
+      return;
+    }
+    emptyState.style.display = 'none';
+    showLoading('PSD 파싱 중…');
+    sbLeft.textContent = file.name + ' 여는 중…';
+
+    const reader = new FileReader();
+    reader.onload = function(){
+      setTimeout(function(){ // let the loading UI paint before the (synchronous) parse
+        try{
+          const result = PSDParser.parsePSD(reader.result);
+          renderResult(result, file);
+          hideLoading();
+        }catch(err){
+          console.error(err);
+          showError('파일을 열 수 없습니다', '<br>' + (err.message || 'PSD 구조를 해석하는 중 오류가 발생했습니다.'));
+        }
+      }, 30);
+    };
+    reader.onerror = function(){ showError('파일을 읽을 수 없습니다', '<br>브라우저에서 파일을 읽는 중 문제가 발생했습니다.'); };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderResult(result, file){
+    currentResult = result;
+    docW = result.width; docH = result.height;
+
+    fileMeta.style.display = 'flex';
+    closeBtn.style.display = 'inline-flex';
+    metaName.textContent = file.name;
+    metaSize.textContent = fmtBytes(file.size);
+    metaDims.textContent = docW + ' × ' + docH + ' px';
+    metaMode.textContent = (MODE_LABEL[result.mode] || ('모드 '+result.mode)) + ' · ' + result.depth + '비트';
+
+    canvasScroll.classList.remove('centered');
+    canvasScroll.innerHTML = '';
+    docFrame = document.createElement('div');
+    docFrame.className = 'doc-frame';
+
+    if(result.composite){
+      mainCanvas = document.createElement('canvas');
+      mainCanvas.width = docW; mainCanvas.height = docH;
+      const ctx = mainCanvas.getContext('2d');
+      ctx.putImageData(new ImageData(result.composite.data, docW, docH), 0, 0);
+      docFrame.appendChild(mainCanvas);
+    } else {
+      mainCanvas = document.createElement('canvas');
+      mainCanvas.width = Math.max(docW,1); mainCanvas.height = Math.max(docH,1);
+      docFrame.appendChild(mainCanvas);
+    }
+    docFrame.style.width = docW + 'px';
+    docFrame.style.height = docH + 'px';
+    canvasScroll.appendChild(docFrame);
+
+    if(result.warnings && result.warnings.length){
+      showNotice(result.warnings[0]);
+    } else {
+      noticeBanner.classList.remove('show');
+    }
+
+    // layer tree
+    leafCounter = 0;
+    layerTree.innerHTML = '';
+    const rootChildren = (result.tree && result.tree.children) ? result.tree.children : [];
+    if(rootChildren.length === 0){
+      layerTree.innerHTML = '<div class="layer-empty">이 파일에서 별도의 레이어 구조를 찾지 못했어요. 단일 배경 이미지로만 구성되어 있을 수 있어요.</div>';
+    } else {
+      const ordered = rootChildren.slice().reverse();
+      ordered.forEach(function(node){ layerTree.appendChild(buildLayerRow(node, 0)); });
+    }
+    layerCount.textContent = String(leafCounter);
+    layersPanel.style.display = 'flex';
+    stageToolbar.style.display = 'flex';
+    sbLeft.textContent = file.name;
+
+    requestAnimationFrame(function(){
+      const availW = canvasScroll.clientWidth - 80;
+      const availH = canvasScroll.clientHeight - 80;
+      const fitZoom = Math.min(availW / docW, availH / docH, 1);
+      applyZoom(fitZoom > 0 ? fitZoom : 1);
+    });
+  }
+
+  let leafCounter = 0;
+  function buildLayerRow(node, depth){
+    const hasChildren = node.isGroup;
+    if(!hasChildren) leafCounter++;
+
+    const wrap = document.createElement('div');
+    const row = document.createElement('div');
+    row.className = 'layer-row' + (hasChildren ? ' group-row' : '');
+    row.style.paddingLeft = (10 + depth * 16) + 'px';
+
+    const twirl = document.createElement('div');
+    twirl.className = 'twirl' + (hasChildren ? '' : ' leaf');
+    twirl.textContent = '▾';
+    row.appendChild(twirl);
+
+    const eye = document.createElement('div');
+    eye.className = 'eye' + (node.visible === false ? ' hidden-layer' : '');
+    eye.innerHTML = node.visible === false
+      ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.35 20.35 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+      : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+    row.appendChild(eye);
+
+    const typeIcon = document.createElement('div');
+    typeIcon.className = 'type-icon';
+    typeIcon.innerHTML = hasChildren
+      ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
+      : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>';
+    row.appendChild(typeIcon);
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = node.name || '(이름 없음)';
+    row.appendChild(name);
+
+    const opPct = Math.round(((typeof node.opacity === 'number') ? node.opacity : 255) / 255 * 100);
+    if(opPct < 100){
+      const op = document.createElement('div');
+      op.className = 'opacity';
+      op.textContent = opPct + '%';
+      row.appendChild(op);
+    }
+
+    row.addEventListener('click', function(e){ e.stopPropagation(); selectLayer(node, row); });
+    wrap.appendChild(row);
+
+    if(hasChildren){
+      const childrenWrap = document.createElement('div');
+      childrenWrap.className = 'children-wrap';
+      (node.children || []).slice().reverse().forEach(function(child){
+        childrenWrap.appendChild(buildLayerRow(child, depth + 1));
+      });
+      wrap.appendChild(childrenWrap);
+      twirl.addEventListener('click', function(e){
+        e.stopPropagation();
+        const collapsed = childrenWrap.classList.toggle('collapsed');
+        twirl.classList.toggle('collapsed', collapsed);
+      });
+    }
+    return wrap;
+  }
+
+  function clearSelection(){
+    document.querySelectorAll('.layer-row.selected').forEach(el => el.classList.remove('selected'));
+    if(selectedBox && selectedBox.parentNode) selectedBox.parentNode.removeChild(selectedBox);
+    selectedBox = null;
+  }
+
+  function selectLayer(node, rowEl){
+    clearSelection();
+    rowEl.classList.add('selected');
+    layerPreview.classList.add('show');
+
+    if(docFrame && typeof node.left === 'number'){
+      const box = document.createElement('div');
+      box.className = 'layer-box';
+      box.style.left = (node.left * zoom) + 'px';
+      box.style.top = (node.top * zoom) + 'px';
+      box.style.width = Math.max((node.width||0) * zoom, 2) + 'px';
+      box.style.height = Math.max((node.height||0) * zoom, 2) + 'px';
+      const tag = document.createElement('div');
+      tag.className = 'tag';
+      tag.textContent = node.name;
+      box.appendChild(tag);
+      docFrame.appendChild(box);
+      selectedBox = box;
+    }
+
+    const opPct = Math.round(((typeof node.opacity === 'number') ? node.opacity : 255) / 255 * 100);
+    let metaHtml = '<b>' + (node.name || '(이름 없음)') + '</b><br>';
+    if(node.width && node.height) metaHtml += node.width + ' × ' + node.height + ' px<br>';
+    metaHtml += '불투명도 ' + opPct + '%<br>';
+    if(node.blendMode) metaHtml += '블렌드 모드: ' + node.blendMode + '<br>';
+    metaHtml += node.visible === false ? '숨김 레이어' : '표시됨';
+    lpMeta.innerHTML = metaHtml;
+
+    lpFrame.innerHTML = '<span class="none">미리보기 없음</span>';
+    if(!node.isGroup && node.planes && node.width && node.height && currentResult){
+      const hasAlpha = !!node.planes[-1];
+      const rgba = PSDParser.planesToRGBA(node.planes, node.width, node.height, currentResult.mode, hasAlpha);
+      if(rgba){
+        const c = document.createElement('canvas');
+        c.width = node.width; c.height = node.height;
+        c.getContext('2d').putImageData(new ImageData(rgba, node.width, node.height), 0, 0);
+        lpFrame.innerHTML = '';
+        lpFrame.appendChild(c);
+      }
+    }
+  }
+
+  function applyZoom(z){
+    zoom = Math.max(0.02, Math.min(z, 8));
+    if(docFrame){
+      docFrame.style.width = (docW * zoom) + 'px';
+      docFrame.style.height = (docH * zoom) + 'px';
+      if(mainCanvas){ mainCanvas.style.width = (docW * zoom) + 'px'; mainCanvas.style.height = (docH * zoom) + 'px'; }
+      if(selectedBox){ selectedBox.remove(); selectedBox = null; }
+      const selectedRow = document.querySelector('.layer-row.selected');
+      if(selectedRow) selectedRow.click();
+    }
+    zoomReadout.textContent = Math.round(zoom * 100) + '%';
+  }
+
+  zoomIn.addEventListener('click', () => applyZoom(zoom * 1.25));
+  zoomOut.addEventListener('click', () => applyZoom(zoom / 1.25));
+  oneToOneBtn.addEventListener('click', () => applyZoom(1));
+  fitBtn.addEventListener('click', function(){
+    const availW = canvasScroll.clientWidth - 80;
+    const availH = canvasScroll.clientHeight - 80;
+    const fitZoom = Math.min(availW / docW, availH / docH, 1);
+    applyZoom(fitZoom > 0 ? fitZoom : 1);
+  });
+
+})();
+</script>
+</body>
+</html>
