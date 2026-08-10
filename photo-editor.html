@@ -961,11 +961,16 @@
   function exportPsd(){
     if(!layers.length) return;
     if(!window.agPsd){ alert('PSD 라이브러리를 아직 불러오는 중입니다. 잠시 후 다시 시도해주세요.'); return; }
-    const children = layers.map(l=>{
+    const children = layers.filter(l=>l.type!=='group').map(l=>{
       const baked = bakeLayerForExport(l);
       const left = Math.round(l.x - l.w/2), top = Math.round(l.y - l.h/2);
+      let hidden = !l.visible;
+      if(l.groupId){
+        const g = layers.find(x=>x.id===l.groupId);
+        if(g && !g.visible) hidden = true;
+      }
       return { name: l.name, left, top, right: left+baked.width, bottom: top+baked.height,
-        canvas: baked, opacity: l.opacity/100, blendMode: canvasToPsdBlend(l.blend), hidden: !l.visible };
+        canvas: baked, opacity: l.opacity/100, blendMode: canvasToPsdBlend(l.blend), hidden };
     });
     try{
       const buffer = window.agPsd.writePsd({ width: canvas.width, height: canvas.height, children });
@@ -973,7 +978,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href=url; a.download='edited.psd'; a.click();
       URL.revokeObjectURL(url);
-      setStatus('PSD 파일로 저장됨 (회전된 레이어는 픽셀로 병합되어 저장됩니다)');
+      setStatus('PSD 파일로 저장됨 (회전/뒤틀기/그룹 구조는 픽셀로 병합되어 저장됩니다)');
     }catch(err){
       setStatus('PSD 저장 실패: ' + err.message);
     }
