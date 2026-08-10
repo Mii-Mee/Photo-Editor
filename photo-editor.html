@@ -86,6 +86,24 @@
   .split-btn:hover{background:var(--bg-3);}
   .split-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
 
+  #chatWidget{position:fixed;right:20px;bottom:56px;z-index:90;font-family:var(--sans);}
+  #chatToggleBtn{width:48px;height:48px;border-radius:50%;background:var(--accent);border:none;color:#1a0d05;font-size:20px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+  #chatToggleBtn:hover{background:#ff8a54;}
+  #chatPanel{display:none;position:absolute;right:0;bottom:60px;width:300px;height:380px;background:var(--bg-1);border:1px solid var(--line);border-radius:10px;box-shadow:0 16px 48px rgba(0,0,0,.5);flex-direction:column;overflow:hidden;}
+  #chatPanel.open{display:flex;}
+  #chatHeader{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-2);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--text-hi);}
+  #chatCloseBtn{cursor:pointer;color:var(--text-lo);font-size:12px;}
+  #chatCloseBtn:hover{color:var(--accent);}
+  #chatMessages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;}
+  .chat-msg{max-width:85%;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.4;white-space:pre-wrap;}
+  .chat-bot{align-self:flex-start;background:var(--bg-2);color:var(--text-hi);border-bottom-left-radius:2px;}
+  .chat-user{align-self:flex-end;background:var(--accent-dim);color:var(--text-hi);border:1px solid var(--accent);border-bottom-right-radius:2px;}
+  #chatForm{display:flex;gap:6px;padding:10px;border-top:1px solid var(--line);}
+  #chatInput{flex:1;padding:9px 10px;background:var(--bg-2);border:1px solid var(--line);color:var(--text-hi);border-radius:6px;font-size:12px;outline:none;}
+  #chatInput:focus{border-color:var(--accent);}
+  #chatForm button{padding:9px 12px;background:var(--accent);border:none;color:#1a0d05;font-weight:600;border-radius:6px;cursor:pointer;font-size:12px;}
+  #chatForm button:hover{background:#ff8a54;}
+
   #panel{width:280px;flex:0 0 auto;background:var(--bg-1);border-left:1px solid var(--line);overflow-y:auto;padding:14px;}
   #panel::-webkit-scrollbar{width:8px;}
   #panel::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:4px;}
@@ -723,6 +741,21 @@
         <div class="gbtn" id="btnCsCancel">취소</div>
         <div class="gbtn primary-modal" id="btnCsApply">적용</div>
       </div>
+    </div>
+  </div>
+
+  <div id="chatWidget">
+    <button id="chatToggleBtn" title="명령 챗봇">💬</button>
+    <div id="chatPanel">
+      <div id="chatHeader">
+        <span>명령 챗봇</span>
+        <span id="chatCloseBtn">✕</span>
+      </div>
+      <div id="chatMessages"></div>
+      <form id="chatForm">
+        <input id="chatInput" type="text" placeholder="예: 밝기 20 올려줘" autocomplete="off">
+        <button type="submit">전송</button>
+      </form>
     </div>
   </div>
 </div>
@@ -2758,6 +2791,213 @@
       if(arrow) arrow.textContent = isCollapsed ? '▲' : '▼';
     });
   });
+
+  // ---------- Command chatbot ----------
+  function extractNumber(text, def){
+    const m = text.match(/-?\d+(\.\d+)?/);
+    return m ? Number(m[0]) : def;
+  }
+  function extractQuoted(text){
+    const m = text.match(/["'“”‘’「」](.+?)["'“”‘’「」]/);
+    return m ? m[1] : null;
+  }
+  const CHAT_HELP =
+`사용 가능한 명령 예시예요:
+• 밝기/대비/채도/색조/블러 20 올려줘 (내려줘)
+• 왼쪽/오른쪽으로 회전, 좌우반전, 상하반전
+• 불투명도 50으로
+• 필터 흑백/세피아/반전/빈티지/쿨톤/웜톤/드라마틱 (없애줘)
+• 텍스트 "안녕" 추가해줘
+• 사각형/원형/삼각형 도형 추가해줘
+• 레이어 삭제해줘 / 그룹으로 묶어줘
+• 확대/축소해줘, 50%로 확대
+• 실행취소 / 다시실행
+• 저장(다운로드)해줘 / 새 캔버스
+
+레이어 관련 명령은 먼저 레이어를 선택해야 해요.`;
+
+  function applyAdjustmentCommand(text, key, label, min, max){
+    const layer = activeLayer();
+    if(!layer) return '조정하려면 먼저 레이어를 선택해주세요.';
+    let n = extractNumber(text, 10);
+    const isDecrease = /내리|낮추|감소|줄이|어둡게/.test(text);
+    if(isDecrease && n>0) n = -n;
+    const cur = layer.adjustments[key]||0;
+    const next = Math.max(min, Math.min(max, cur+n));
+    layer.adjustments[key] = next;
+    render(); pushHistory(); refreshContextPanels();
+    return `${label}를 ${n>0?'+':''}${n} 조정했어요. (현재 ${next})`;
+  }
+
+  function interpretCommand(raw){
+    const text = raw.trim();
+    if(!text) return '명령을 입력해주세요.';
+
+    if(/도움말|명령어|help|뭐.*할.*수/.test(text)) return CHAT_HELP;
+
+    if(/조정.*초기화|초기화.*조정|조정.*리셋/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      layer.adjustments = blankAdj();
+      render(); pushHistory(); refreshContextPanels();
+      return '조정 값을 초기화했어요.';
+    }
+
+    if(/밝기|명도/.test(text)) return applyAdjustmentCommand(text,'brightness','밝기',-100,100);
+    if(/대비/.test(text)) return applyAdjustmentCommand(text,'contrast','대비',-100,100);
+    if(/채도/.test(text)) return applyAdjustmentCommand(text,'saturation','채도',-100,100);
+    if(/색조|hue/i.test(text)) return applyAdjustmentCommand(text,'hue','색조',-180,180);
+    if(/블러|흐림|흐리게/.test(text)) return applyAdjustmentCommand(text,'blur','블러',0,20);
+
+    if(/왼쪽.*회전|회전.*왼쪽|반시계/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      layer.rotation -= 90; render(); pushHistory(); refreshContextPanels();
+      return '레이어를 왼쪽으로 90도 회전했어요.';
+    }
+    if(/오른쪽.*회전|회전.*오른쪽|시계방향/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      layer.rotation += 90; render(); pushHistory(); refreshContextPanels();
+      return '레이어를 오른쪽으로 90도 회전했어요.';
+    }
+    if(/회전/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      const n = extractNumber(text, 90);
+      layer.rotation += n; render(); pushHistory(); refreshContextPanels();
+      return `레이어를 ${n}도 회전했어요. (현재 ${Math.round(layer.rotation)}도)`;
+    }
+    if(/좌우.*반전|가로.*반전/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      layer.flipH = !layer.flipH; render(); pushHistory(); refreshContextPanels();
+      return '좌우로 반전했어요.';
+    }
+    if(/상하.*반전|세로.*반전/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      layer.flipV = !layer.flipV; render(); pushHistory(); refreshContextPanels();
+      return '상하로 반전했어요.';
+    }
+
+    if(/불투명도/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      const n = Math.max(0, Math.min(100, extractNumber(text, 100)));
+      layer.opacity = n; render(); pushHistory(); refreshContextPanels();
+      return `불투명도를 ${n}%로 맞췄어요.`;
+    }
+
+    if(/필터/.test(text)){
+      const layer = activeLayer();
+      if(!layer || layer.type!=='raster') return '필터를 적용하려면 이미지(래스터) 레이어를 먼저 선택해주세요.';
+      let preset = null, label = '';
+      if(/흑백|그레이/.test(text)){ preset='grayscale'; label='흑백'; }
+      else if(/세피아/.test(text)){ preset='sepia'; label='세피아'; }
+      else if(/반전|인버트/.test(text)){ preset='invert'; label='반전'; }
+      else if(/빈티지/.test(text)){ preset='vintage'; label='빈티지'; }
+      else if(/쿨톤/.test(text)){ preset='cool'; label='쿨톤'; }
+      else if(/웜톤/.test(text)){ preset='warm'; label='웜톤'; }
+      else if(/드라마틱/.test(text)){ preset='dramatic'; label='드라마틱'; }
+      else if(/없애|제거|해제|없음/.test(text)){ preset='none'; label='없음'; }
+      if(!preset) return '어떤 필터인지 못 알아들었어요. (흑백/세피아/반전/빈티지/쿨톤/웜톤/드라마틱/없애줘)';
+      layer.filterPreset = preset;
+      render(); pushHistory(); refreshContextPanels();
+      return `필터를 "${label}"로 적용했어요.`;
+    }
+
+    if(/텍스트|글자/.test(text) && /추가|넣어|써줘|입력|만들어/.test(text)){
+      if(!canvas.width) return '먼저 캔버스를 만들거나 이미지를 열어주세요.';
+      let content = extractQuoted(text);
+      if(!content){
+        const m = text.match(/(?:텍스트|글자)\s*[:：]?\s*(.+?)\s*(?:추가|넣어줘|넣어|써줘|입력해줘|입력|만들어줘|만들어)/);
+        content = m ? m[1].trim() : '텍스트';
+      }
+      const layer = addTextLayer(canvas.width/2, canvas.height/2, content);
+      selectedIds=[layer.id];
+      pushHistory(); render(); refreshLayerPanel(); refreshContextPanels();
+      return `텍스트 레이어 "${content}"를 추가했어요.`;
+    }
+
+    if(/도형|사각형|네모|원형|타원|동그라미|삼각형/.test(text) && /추가|넣어|그려줘|만들어/.test(text)){
+      if(!canvas.width) return '먼저 캔버스를 만들거나 이미지를 열어주세요.';
+      let kind='rect', label='사각형';
+      if(/삼각형/.test(text)){ kind='triangle'; label='삼각형'; }
+      else if(/원형|타원|동그라미/.test(text)){ kind='ellipse'; label='타원'; }
+      const size = Math.min(canvas.width, canvas.height)*0.3;
+      const layer = addShapeLayer(canvas.width/2, canvas.height/2, size, size, kind);
+      selectedIds=[layer.id];
+      pushHistory(); render(); refreshLayerPanel(); refreshContextPanels();
+      return `${label} 도형을 추가했어요.`;
+    }
+
+    if(/그룹/.test(text) && /묶어|만들어|생성/.test(text)){
+      if(selectedIds.filter(id=>{ const l=layers.find(x=>x.id===id); return l && l.type!=='group'; }).length<1){
+        return '그룹으로 묶을 레이어를 먼저 선택해주세요 (Shift+클릭으로 여러 개 선택 가능).';
+      }
+      groupSelectedLayers();
+      return '선택한 레이어를 그룹으로 묶었어요.';
+    }
+
+    if(/레이어/.test(text) && /삭제|지워/.test(text)){
+      if(!selectedIds.length) return '삭제할 레이어를 먼저 선택해주세요.';
+      const n = selectedIds.length;
+      layers = layers.filter(l=>!selectedIds.includes(l.id));
+      selectedIds=[];
+      pruneGroups();
+      pushHistory(); render(); refreshLayerPanel(); refreshContextPanels();
+      return `레이어 ${n}개를 삭제했어요.`;
+    }
+
+    if(/확대|축소|줌|zoom/i.test(text)){
+      if(!canvas.width) return '먼저 캔버스를 만들거나 이미지를 열어주세요.';
+      const numMatch = text.match(/\d+/);
+      if(numMatch){
+        applyZoom(Number(numMatch[0]));
+        return `화면 배율을 ${currentZoomPct}%로 맞췄어요.`;
+      } else if(/축소|zoom\s*out/i.test(text)){
+        applyZoom(currentZoomPct-25);
+        return `화면을 축소했어요. (${currentZoomPct}%)`;
+      } else {
+        applyZoom(currentZoomPct+25);
+        return `화면을 확대했어요. (${currentZoomPct}%)`;
+      }
+    }
+
+    if(/다시\s*실행|redo/i.test(text)){ redo(); return '다시 실행했어요.'; }
+    if(/실행취소|undo|되돌려/i.test(text)){ undo(); return '실행취소했어요.'; }
+
+    if(/저장|다운로드/.test(text)){
+      if(!layers.length) return '다운로드할 내용이 없어요.';
+      $('btnDownload').click();
+      return '이미지를 다운로드했어요.';
+    }
+
+    if(/새\s*캔버스/.test(text)){
+      openNewCanvasModal();
+      return '새 캔버스 만들기 창을 열었어요. 크기를 정하고 "만들기"를 눌러주세요.';
+    }
+
+    return `이해하지 못했어요. "도움말"이라고 입력하면 사용 가능한 명령을 볼 수 있어요.`;
+  }
+
+  function addChatMessage(text, sender){
+    const div = document.createElement('div');
+    div.className = 'chat-msg chat-'+sender;
+    div.textContent = text;
+    $('chatMessages').appendChild(div);
+    $('chatMessages').scrollTop = $('chatMessages').scrollHeight;
+  }
+  $('chatToggleBtn').addEventListener('click', ()=>{
+    const panel = $('chatPanel');
+    panel.classList.toggle('open');
+    if(panel.classList.contains('open')) $('chatInput').focus();
+  });
+  $('chatCloseBtn').addEventListener('click', ()=>{ $('chatPanel').classList.remove('open'); });
+  $('chatForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const text = $('chatInput').value.trim();
+    if(!text) return;
+    addChatMessage(text, 'user');
+    $('chatInput').value = '';
+    const reply = interpretCommand(text);
+    addChatMessage(reply, 'bot');
+  });
+  addChatMessage('안녕하세요! 편집 명령을 채팅으로 내려보세요. 예: "밝기 20 올려줘". "도움말"을 입력하면 전체 명령 목록을 볼 수 있어요.', 'bot');
 
   createNewDoc('무제 1');
 })();
