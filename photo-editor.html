@@ -216,6 +216,9 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/></svg>
       </div>
       <div class="tool" data-tool="eyedropper" title="스포이드">💧</div>
+      <div class="tool" data-tool="liquify" title="유동화 (밀기/당기기/부풀리기/회전)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v6l4-2"/></svg>
+      </div>
       <div class="tool-sep"></div>
       <div class="tool" data-tool="shape" title="도형">▭</div>
       <div class="tool" data-tool="text" title="텍스트">T</div>
@@ -352,6 +355,13 @@
             </div>
           </div>
           <div class="row">
+            <div class="row-label"><span>뒤틀기 (기울이기)</span><div class="gbtn" id="btnResetSkew" style="padding:2px 8px;font-size:10px;">초기화</div></div>
+            <div class="row-label"><span>가로</span><span class="val" id="v-skewx">0°</span></div>
+            <input type="range" id="layerSkewX" min="-75" max="75" value="0">
+            <div class="row-label" style="margin-top:6px;"><span>세로</span><span class="val" id="v-skewy">0°</span></div>
+            <input type="range" id="layerSkewY" min="-75" max="75" value="0">
+          </div>
+          <div class="row">
             <div class="row-label">
               <span>크기 (px)</span>
               <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-lo);cursor:pointer;font-family:var(--sans);">
@@ -477,6 +487,34 @@
           <div class="color-row"><input type="color" id="bucketColor" value="#ff7a3d"><span style="font-size:12px;color:var(--text-lo);">채우기 색상</span></div>
           <div class="row"><div class="row-label"><span>허용 오차</span><span class="val" id="v-tolerance">20</span></div><input type="range" id="bucketTolerance" min="0" max="100" value="20"></div>
           <div style="font-size:11px;color:var(--text-lo);">클릭한 지점과 비슷한 색의 연결된 영역을 채워요. 허용 오차가 높을수록 더 넓게 채워집니다.</div>
+        </div>
+      </div>
+
+      <div class="pgroup" id="liquifyOptionsGroup" style="display:none;">
+        <div class="pgroup-title" data-target="liquifyGroupContent">유동화<span class="pgroup-arrow">▼</span></div>
+        <div class="pgroup-content" id="liquifyGroupContent" style="display:none;">
+          <div class="row">
+            <div class="row-label"><span>모드</span></div>
+            <select id="liquifyMode">
+              <option value="push">밀기 (드래그 방향으로)</option>
+              <option value="pucker">당기기 (중심으로 오목하게)</option>
+              <option value="bloat">부풀리기 (밖으로 볼록하게)</option>
+              <option value="twirl">회전 (소용돌이)</option>
+            </select>
+          </div>
+          <div id="liquifyHint" style="font-size:11px;color:var(--text-lo);margin:8px 0 10px;">이미지 레이어를 선택한 뒤, 캔버스 위에서 드래그하면 그 방향으로 픽셀이 밀려요.</div>
+          <div class="row">
+            <div class="row-label"><span>브러시 크기</span></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="range" id="liquifyBrushSize" min="10" max="400" value="80" style="flex:1;">
+              <input type="number" id="liquifyBrushSizeNum" min="5" max="1000" value="80" style="width:58px;flex:0 0 auto;">
+              <span style="color:var(--text-lo);font-size:12px;">px</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-label"><span>강도</span><span class="val" id="v-liqstrength">1.0</span></div>
+            <input type="range" id="liquifyStrength" min="0.2" max="3" step="0.1" value="1">
+          </div>
         </div>
       </div>
 
@@ -711,6 +749,8 @@
   let currentColor = '#ff7a3d';
   let dragMode = null, dragHandle = null, dragStartPt = null, dragOrigLayers = [];
   let isPainting = false, lastPaintPt = null, paintTarget = null;
+  let liquifyTarget = null;
+  let liquifyInterval = null;
   let pendingShape = null;
   let cropRect = null;
   let selection = null;
@@ -760,6 +800,10 @@
     }
     return f;
   }
+  function applySkew(c, layer){
+    const sx = (layer.skewX||0)*Math.PI/180, sy = (layer.skewY||0)*Math.PI/180;
+    if(sx || sy) c.transform(1, Math.tan(sy), Math.tan(sx), 1, 0, 0);
+  }
 
   // ---------- Render ----------
   function render(forExport){
@@ -778,6 +822,7 @@
       ctx.translate(layer.x, layer.y);
       ctx.rotate(layer.rotation*Math.PI/180);
       ctx.scale(layer.flipH?-1:1, layer.flipV?-1:1);
+      applySkew(ctx, layer);
       if(layer.type==='raster'){
         ctx.drawImage(layer.canvas, -layer.w/2, -layer.h/2, layer.w, layer.h);
       } else if(layer.type==='shape'){
@@ -905,6 +950,7 @@
     lctx.translate(w/2, h/2);
     lctx.rotate(layer.rotation*Math.PI/180);
     lctx.scale(layer.flipH?-1:1, layer.flipV?-1:1);
+    applySkew(lctx, layer);
     if(layer.type==='raster') lctx.drawImage(layer.canvas, -layer.w/2, -layer.h/2, layer.w, layer.h);
     else if(layer.type==='shape') drawShape(lctx, layer);
     else if(layer.type==='text') drawText(lctx, layer);
@@ -1038,6 +1084,26 @@
       if(c){ currentColor=c; $('brushColor').value=c; }
     } else if(currentTool==='bucket'){
       runBucketFill(pt);
+    } else if(currentTool==='liquify'){
+      const layer = ensureLiquifyTarget();
+      if(!layer){ setStatus('유동화를 적용할 이미지 레이어를 먼저 선택하세요.'); return; }
+      if(!pointInSelection(pt.x, pt.y)) return;
+      liquifyTarget = layer;
+      dragMode='liquify'; isPainting=true; lastPaintPt=pt;
+      const mode = $('liquifyMode').value;
+      if(mode!=='push'){
+        liquifyInterval = setInterval(()=>{
+          if(!liquifyTarget || !lastPaintPt || !pointInSelection(lastPaintPt.x, lastPaintPt.y)) return;
+          const layer2 = liquifyTarget;
+          const scaleX = layer2.canvas.width/layer2.w, scaleY = layer2.canvas.height/layer2.h;
+          const p = localPoint(layer2, lastPaintPt.x, lastPaintPt.y);
+          const centerLocal = {x:(p.x+layer2.w/2)*scaleX, y:(p.y+layer2.h/2)*scaleY};
+          const radiusPx = Number($('liquifyBrushSizeNum').value) * scaleX;
+          const strength = Number($('liquifyStrength').value);
+          liquifyRadialDab(layer2, centerLocal, radiusPx, strength*0.15, mode);
+          render();
+        }, 40);
+      }
     } else if(currentTool==='select'){
       dragMode='selectnew'; dragStartPt=pt;
       selection = {x:pt.x, y:pt.y, w:0, h:0};
@@ -1082,6 +1148,21 @@
     } else if(dragMode==='paint'){
       paintLine(lastPaintPt.x, lastPaintPt.y, pt.x, pt.y);
       lastPaintPt = pt;
+    } else if(dragMode==='liquify'){
+      const mode = $('liquifyMode').value;
+      if(mode==='push' && pointInSelection(pt.x, pt.y) && liquifyTarget){
+        const layer = liquifyTarget;
+        const scaleX = layer.canvas.width/layer.w, scaleY = layer.canvas.height/layer.h;
+        const fromP = localPoint(layer, lastPaintPt.x, lastPaintPt.y);
+        const toP = localPoint(layer, pt.x, pt.y);
+        const fromLocal = {x:(fromP.x+layer.w/2)*scaleX, y:(fromP.y+layer.h/2)*scaleY};
+        const toLocal = {x:(toP.x+layer.w/2)*scaleX, y:(toP.y+layer.h/2)*scaleY};
+        const radiusPx = Number($('liquifyBrushSizeNum').value) * scaleX;
+        const strength = Number($('liquifyStrength').value);
+        liquifyDab(layer, fromLocal, toLocal, radiusPx, strength);
+        render();
+      }
+      lastPaintPt = pt;
     } else if(dragMode==='shape'){
       const dx = pt.x-dragStartPt.x, dy = pt.y-dragStartPt.y;
       pendingShape.x = dragStartPt.x + dx/2;
@@ -1106,6 +1187,11 @@
 
   window.addEventListener('mouseup', ()=>{
     if(dragMode==='paint'){ isPainting=false; pushHistory(); }
+    else if(dragMode==='liquify'){
+      isPainting=false; liquifyTarget=null;
+      if(liquifyInterval){ clearInterval(liquifyInterval); liquifyInterval=null; }
+      pushHistory(); refreshLayerPanel();
+    }
     else if(['move','resize','rotate','shape'].includes(dragMode)){ pushHistory(); refreshLayerPanel(); }
     else if(dragMode==='selectnew'){
       if(!selection || selection.w<2 || selection.h<2){ selection=null; }
@@ -1226,6 +1312,114 @@
     const steps = Math.max(1, Math.floor(dist/2));
     for(let i=0;i<=steps;i++){ const t=i/steps; paintAt(x1+(x2-x1)*t, y1+(y2-y1)*t, currentTool==='eraser'); }
   }
+
+  // ---------- Liquify (local pixel push) ----------
+  function bilinearSample(data, w, h, x, y){
+    x = Math.max(0, Math.min(w-1.001, x));
+    y = Math.max(0, Math.min(h-1.001, y));
+    const x0=Math.floor(x), y0=Math.floor(y), x1=x0+1, y1=y0+1;
+    const fx=x-x0, fy=y-y0;
+    const i00=(y0*w+x0)*4, i10=(y0*w+x1)*4, i01=(y1*w+x0)*4, i11=(y1*w+x1)*4;
+    const out=[0,0,0,0];
+    for(let c=0;c<4;c++){
+      const top = data[i00+c]*(1-fx)+data[i10+c]*fx;
+      const bot = data[i01+c]*(1-fx)+data[i11+c]*fx;
+      out[c] = top*(1-fy)+bot*fy;
+    }
+    return out;
+  }
+  function liquifyDab(layer, fromLocal, toLocal, radiusPx, strength){
+    const w = layer.canvas.width, h = layer.canvas.height;
+    const lctx = layer.canvas.getContext('2d');
+    const cx = toLocal.x, cy = toLocal.y;
+    const dx = toLocal.x - fromLocal.x, dy = toLocal.y - fromLocal.y;
+    if(Math.abs(dx)<0.01 && Math.abs(dy)<0.01) return;
+    const minX = Math.max(0, Math.floor(cx-radiusPx)), maxX = Math.min(w-1, Math.ceil(cx+radiusPx));
+    const minY = Math.max(0, Math.floor(cy-radiusPx)), maxY = Math.min(h-1, Math.ceil(cy+radiusPx));
+    if(maxX<=minX || maxY<=minY) return;
+    const regionW = maxX-minX+1, regionH = maxY-minY+1;
+    const srcData = lctx.getImageData(minX,minY,regionW,regionH);
+    const dstData = lctx.createImageData(regionW,regionH);
+    dstData.data.set(srcData.data);
+    for(let y=0;y<regionH;y++){
+      for(let x=0;x<regionW;x++){
+        const gx = minX+x, gy=minY+y;
+        const dist = Math.hypot(gx-cx, gy-cy);
+        if(dist>radiusPx) continue;
+        const t = 1 - dist/radiusPx;
+        const falloff = t*t*(3-2*t);
+        const sampleX = gx - dx*falloff*strength - minX;
+        const sampleY = gy - dy*falloff*strength - minY;
+        const rgba = bilinearSample(srcData.data, regionW, regionH, sampleX, sampleY);
+        const di = (y*regionW+x)*4;
+        dstData.data[di]=rgba[0]; dstData.data[di+1]=rgba[1]; dstData.data[di+2]=rgba[2]; dstData.data[di+3]=rgba[3];
+      }
+    }
+    lctx.putImageData(dstData, minX, minY);
+  }
+  function liquifyRadialDab(layer, centerLocal, radiusPx, strength, mode){
+    const w = layer.canvas.width, h = layer.canvas.height;
+    const lctx = layer.canvas.getContext('2d');
+    const cx = centerLocal.x, cy = centerLocal.y;
+    const minX = Math.max(0, Math.floor(cx-radiusPx)), maxX = Math.min(w-1, Math.ceil(cx+radiusPx));
+    const minY = Math.max(0, Math.floor(cy-radiusPx)), maxY = Math.min(h-1, Math.ceil(cy+radiusPx));
+    if(maxX<=minX || maxY<=minY) return;
+    const regionW = maxX-minX+1, regionH = maxY-minY+1;
+    const srcData = lctx.getImageData(minX,minY,regionW,regionH);
+    const dstData = lctx.createImageData(regionW,regionH);
+    dstData.data.set(srcData.data);
+    const localCx = cx-minX, localCy = cy-minY;
+    for(let y=0;y<regionH;y++){
+      for(let x=0;x<regionW;x++){
+        const gx = minX+x, gy=minY+y;
+        const dist = Math.hypot(gx-cx, gy-cy);
+        if(dist>radiusPx || dist<0.0001) continue;
+        const t = 1 - dist/radiusPx;
+        const falloff = t*t*(3-2*t);
+        const lx = gx-minX, ly = gy-minY;
+        let sampleX = lx, sampleY = ly;
+        if(mode==='pucker'){
+          const factor = 1 + falloff*strength*0.6;
+          sampleX = localCx + (lx-localCx)*factor;
+          sampleY = localCy + (ly-localCy)*factor;
+        } else if(mode==='bloat'){
+          const factor = Math.max(0.05, 1 - falloff*strength*0.4);
+          sampleX = localCx + (lx-localCx)*factor;
+          sampleY = localCy + (ly-localCy)*factor;
+        } else if(mode==='twirl'){
+          const angle = falloff*strength*0.35;
+          const dxp = lx-localCx, dyp = ly-localCy;
+          const cosA=Math.cos(angle), sinA=Math.sin(angle);
+          sampleX = localCx + dxp*cosA - dyp*sinA;
+          sampleY = localCy + dxp*sinA + dyp*cosA;
+        }
+        const rgba = bilinearSample(srcData.data, regionW, regionH, sampleX, sampleY);
+        const di = (y*regionW+x)*4;
+        dstData.data[di]=rgba[0]; dstData.data[di+1]=rgba[1]; dstData.data[di+2]=rgba[2]; dstData.data[di+3]=rgba[3];
+      }
+    }
+    lctx.putImageData(dstData, minX, minY);
+  }
+  function ensureLiquifyTarget(){
+    if(selectedIds.length===1){
+      const layer = layers.find(l=>l.id===selectedIds[0]);
+      if(layer && layer.type==='raster') return layer;
+    }
+    return null;
+  }
+  const LIQUIFY_HINTS = {
+    push:'이미지 레이어를 선택한 뒤, 캔버스 위에서 드래그하면 그 방향으로 픽셀이 밀려요.',
+    pucker:'클릭하고 잠깐 누르고 있으면(또는 드래그하면) 브러시 중심으로 픽셀이 오목하게 모여요.',
+    bloat:'클릭하고 잠깐 누르고 있으면 브러시 중심에서 픽셀이 볼록하게 부풀어 올라요.',
+    twirl:'클릭하고 잠깐 누르고 있으면 브러시 영역이 소용돌이치듯 회전해요.'
+  };
+  $('liquifyMode').addEventListener('change', ()=>{ $('liquifyHint').textContent = LIQUIFY_HINTS[$('liquifyMode').value] || ''; });
+  $('liquifyBrushSize').addEventListener('input', ()=>{ $('liquifyBrushSizeNum').value = $('liquifyBrushSize').value; });
+  $('liquifyBrushSizeNum').addEventListener('input', ()=>{
+    const v = Math.max(5, Math.min(1000, Number($('liquifyBrushSizeNum').value)||5));
+    if(v<=400) $('liquifyBrushSize').value = v;
+  });
+  $('liquifyStrength').addEventListener('input', ()=>{ $('v-liqstrength').textContent = Number($('liquifyStrength').value).toFixed(1); });
 
   // ---------- Eyedropper ----------
   function samplePixel(px,py){
@@ -1614,6 +1808,8 @@
     $('layerXInput').value = Math.round(layer.x);
     $('layerYInput').value = Math.round(layer.y);
     $('layerRotationInput').value = Math.round(layer.rotation);
+    $('layerSkewX').value = layer.skewX||0; $('v-skewx').textContent = (layer.skewX||0)+'°';
+    $('layerSkewY').value = layer.skewY||0; $('v-skewy').textContent = (layer.skewY||0)+'°';
     $('layerWidthInput').value = Math.round(layer.w);
     $('layerHeightInput').value = Math.round(layer.h);
     $('layerScaleInput').value = 100;
@@ -1720,6 +1916,24 @@
   });
   $('layerRotationInput').addEventListener('change', ()=>{ if(activeLayer()) pushHistory(); });
 
+  $('layerSkewX').addEventListener('input', ()=>{
+    const layer = activeLayer(); if(!layer) return;
+    layer.skewX = Number($('layerSkewX').value); $('v-skewx').textContent = layer.skewX+'°'; render();
+  });
+  $('layerSkewX').addEventListener('change', ()=>{ if(activeLayer()) pushHistory(); });
+  $('layerSkewY').addEventListener('input', ()=>{
+    const layer = activeLayer(); if(!layer) return;
+    layer.skewY = Number($('layerSkewY').value); $('v-skewy').textContent = layer.skewY+'°'; render();
+  });
+  $('layerSkewY').addEventListener('change', ()=>{ if(activeLayer()) pushHistory(); });
+  $('btnResetSkew').addEventListener('click', ()=>{
+    const layer = activeLayer(); if(!layer) return;
+    layer.skewX = 0; layer.skewY = 0;
+    $('layerSkewX').value = 0; $('layerSkewY').value = 0;
+    $('v-skewx').textContent = '0°'; $('v-skewy').textContent = '0°';
+    pushHistory(); render();
+  });
+
   // ---------- Layer size: numeric width/height & percentage scale ----------
   $('layerWidthInput').addEventListener('input', ()=>{
     const layer = activeLayer(); if(!layer || layer.type==='text') return;
@@ -1823,7 +2037,7 @@
 
   const TOOL_PANEL_MAP = {
     select:'selectionGroupContent', brush:'brushGroupContent', eraser:'brushGroupContent', bucket:'bucketGroupContent',
-    shape:'shapeGroupContent', text:'textGroupContent', crop:'cropGroupContent'
+    shape:'shapeGroupContent', text:'textGroupContent', crop:'cropGroupContent', liquify:'liquifyGroupContent'
   };
   function expandGroup(contentId){
     const content = document.getElementById(contentId);
@@ -1843,6 +2057,7 @@
       currentTool = tool;
       $('brushOptionsGroup').style.display = (tool==='brush'||tool==='eraser') ? 'block':'none';
       $('bucketOptionsGroup').style.display = tool==='bucket' ? 'block':'none';
+      $('liquifyOptionsGroup').style.display = tool==='liquify' ? 'block':'none';
       $('cropGroup').style.display = tool==='crop' ? 'block':'none';
       cropBoxEl.style.display='none'; cropRect=null;
       canvas.style.cursor = tool==='move' ? 'default' : tool==='eyedropper' ? 'crosshair' : tool==='text' ? 'text' : 'crosshair';
