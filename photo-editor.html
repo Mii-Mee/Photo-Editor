@@ -752,10 +752,10 @@
         <span id="chatCloseBtn">✕</span>
       </div>
       <div id="chatMessages"></div>
-      <form id="chatForm">
+      <div id="chatForm">
         <input id="chatInput" type="text" placeholder="예: 밝기 20 올려줘" autocomplete="off">
-        <button type="submit">전송</button>
-      </form>
+        <button type="button" id="chatSendBtn">전송</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2293,15 +2293,12 @@
   $('btnNcCancel').addEventListener('click', closeNewCanvasModal);
   $('modalOverlay').addEventListener('click', e=>{ if(e.target.id==='modalOverlay') closeNewCanvasModal(); });
 
-  $('btnNcCreate').addEventListener('click', ()=>{
-    const unit = $('ncUnit').value, ppi = Number($('ncRes').value)||72;
-    const w = toPx(Number($('ncWidth').value)||1, unit, ppi);
-    const h = toPx(Number($('ncHeight').value)||1, unit, ppi);
+  function createCanvasDoc(w, h, bg){
     ensureNewDocForCreation();
     canvas.width = w; canvas.height = h;
     layers = []; selectedIds = []; historyStack = []; historyIndex = -1;
     deselect();
-    if(ncBg==='white'){
+    if(bg==='white'){
       const c = document.createElement('canvas'); c.width=w; c.height=h;
       const bctx = c.getContext('2d'); bctx.fillStyle='#ffffff'; bctx.fillRect(0,0,w,h);
       layers.push({id:makeId(), type:'raster', name:'배경', canvas:c, x:w/2, y:h/2, w, h,
@@ -2312,6 +2309,12 @@
     if(activeDocIndex>=0) documents[activeDocIndex].name = `${w}×${h}`;
     pushHistory(); render(); refreshLayerPanel(); refreshContextPanels();
     renderTabBar(); renderSplitPreviews();
+  }
+  $('btnNcCreate').addEventListener('click', ()=>{
+    const unit = $('ncUnit').value, ppi = Number($('ncRes').value)||72;
+    const w = toPx(Number($('ncWidth').value)||1, unit, ppi);
+    const h = toPx(Number($('ncHeight').value)||1, unit, ppi);
+    createCanvasDoc(w, h, ncBg);
     setStatus(`새 캔버스 ${w}×${h}px 생성됨 (${unit==='px'?'픽셀':unit+', '+ppi+'ppi'})`);
     closeNewCanvasModal();
   });
@@ -2801,6 +2804,24 @@
     const m = text.match(/["'“”‘’「」](.+?)["'“”‘’「」]/);
     return m ? m[1] : null;
   }
+  const UNIT_WORDS = {'px':'px','픽셀':'px','cm':'cm','센티미터':'cm','센티':'cm','mm':'mm','밀리미터':'mm','밀리':'mm','in':'in','인치':'in','inch':'in','pt':'pt','포인트':'pt'};
+  const UNIT_RE = '(px|픽셀|cm|센티미터|센티|mm|밀리미터|밀리|inch|in|인치|pt|포인트)';
+  function parseCanvasDimensions(text){
+    const wRe = new RegExp('(?:가로|너비|폭|width)\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*'+UNIT_RE+'?', 'i');
+    const hRe = new RegExp('(?:세로|높이|height)\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*'+UNIT_RE+'?', 'i');
+    const wm = text.match(wRe), hm = text.match(hRe);
+    if(wm && hm){
+      const unit = (wm[2] && UNIT_WORDS[wm[2].toLowerCase()]) || (hm[2] && UNIT_WORDS[hm[2].toLowerCase()]) || 'px';
+      return { w:Number(wm[1]), h:Number(hm[1]), unit };
+    }
+    const xRe = new RegExp('(\\d+(?:\\.\\d+)?)\\s*[x×X]\\s*(\\d+(?:\\.\\d+)?)\\s*'+UNIT_RE+'?');
+    const xm = text.match(xRe);
+    if(xm){
+      const unit = (xm[3] && UNIT_WORDS[xm[3].toLowerCase()]) || 'px';
+      return { w:Number(xm[1]), h:Number(xm[2]), unit };
+    }
+    return null;
+  }
   const CHAT_HELP =
 `사용 가능한 명령 예시예요:
 • 밝기/대비/채도/색조/블러 20 올려줘 (내려줘)
@@ -2812,7 +2833,7 @@
 • 레이어 삭제해줘 / 그룹으로 묶어줘
 • 확대/축소해줘, 50%로 확대
 • 실행취소 / 다시실행
-• 저장(다운로드)해줘 / 새 캔버스
+• 저장(다운로드)해줘 / 새 캔버스 (예: "가로 90cm 세로 170cm 새 캔버스 열어줘")
 
 레이어 관련 명령은 먼저 레이어를 선택해야 해요.`;
 
@@ -2968,8 +2989,24 @@
     }
 
     if(/새\s*캔버스/.test(text)){
+      const dims = parseCanvasDimensions(text);
+      if(dims){
+        const ppi = dims.unit==='px' ? 72 : 300;
+        let w = toPx(dims.w, dims.unit, ppi);
+        let h = toPx(dims.h, dims.unit, ppi);
+        const maxDim = 4000;
+        let capped = false;
+        if(w>maxDim || h>maxDim){
+          const scale = maxDim/Math.max(w,h);
+          w = Math.max(1, Math.round(w*scale)); h = Math.max(1, Math.round(h*scale));
+          capped = true;
+        }
+        createCanvasDoc(w, h, 'white');
+        setStatus(`새 캔버스 ${w}×${h}px 생성됨`);
+        return `가로 ${dims.w}${dims.unit}, 세로 ${dims.h}${dims.unit} 크기로 새 캔버스를 만들었어요. (${w}×${h}px${capped ? ' — 원래 크기가 너무 커서 브라우저 성능을 위해 자동으로 줄였어요. 정확한 인쇄용 크기가 필요하면 [크기] 메뉴에서 직접 만들어주세요.' : dims.unit==='px' ? '' : ', 300ppi 기준'})`;
+      }
       openNewCanvasModal();
-      return '새 캔버스 만들기 창을 열었어요. 크기를 정하고 "만들기"를 눌러주세요.';
+      return '새 캔버스 만들기 창을 열었어요. 크기를 정하고 "만들기"를 눌러주세요. (다음엔 "가로 90cm 세로 170cm 새 캔버스"처럼 크기까지 말하면 바로 만들어드려요.)';
     }
 
     return `이해하지 못했어요. "도움말"이라고 입력하면 사용 가능한 명령을 볼 수 있어요.`;
@@ -2988,14 +3025,17 @@
     if(panel.classList.contains('open')) $('chatInput').focus();
   });
   $('chatCloseBtn').addEventListener('click', ()=>{ $('chatPanel').classList.remove('open'); });
-  $('chatForm').addEventListener('submit', e=>{
-    e.preventDefault();
+  function sendChatMessage(){
     const text = $('chatInput').value.trim();
     if(!text) return;
     addChatMessage(text, 'user');
     $('chatInput').value = '';
     const reply = interpretCommand(text);
     addChatMessage(reply, 'bot');
+  }
+  $('chatSendBtn').addEventListener('click', sendChatMessage);
+  $('chatInput').addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); sendChatMessage(); }
   });
   addChatMessage('안녕하세요! 편집 명령을 채팅으로 내려보세요. 예: "밝기 20 올려줘". "도움말"을 입력하면 전체 명령 목록을 볼 수 있어요.', 'bot');
 
