@@ -26,6 +26,7 @@
   .topbtn.primary:hover{background:#ff8a54;}
   .topbtn:disabled{opacity:.35;cursor:not-allowed;}
   #topbar .spacer, #tabbar .spacer{flex:1;}
+  #autosaveStatus{font-size:11px;color:var(--text-lo);white-space:nowrap;font-family:var(--mono);}
   .dropdown{position:relative;}
   .dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--bg-2);border:1px solid var(--line);border-radius:7px;padding:5px;min-width:170px;display:none;flex-direction:column;gap:2px;box-shadow:0 10px 28px rgba(0,0,0,.45);z-index:60;}
   .dropdown-menu.open{display:flex;}
@@ -228,6 +229,12 @@
       <div class="tool" data-tool="select" title="영역 선택 (사각형)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
       </div>
+      <div class="tool" data-tool="lasso" title="올가미 (자유형 선택)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15a5 5 0 1 1 6.5 4.77M13.5 19.77 12 22l-1-2.5"/><path d="M12.5 12.5a3 3 0 1 0 4 4"/></svg>
+      </div>
+      <div class="tool" data-tool="wand" title="마술봉 (비슷한 색 자동 선택)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 1.5 1.5"/><path d="M2 22l9-9"/><path d="M14.5 6.5 17 4l3 3-2.5 2.5z"/><path d="M18 9l1.5 1.5"/><path d="M11 6l1 1"/><path d="M18 3l1 1"/></svg>
+      </div>
       <div class="tool" data-tool="brush" title="브러시">✎</div>
       <div class="tool" data-tool="eraser" title="지우개">⌫</div>
       <div class="tool" data-tool="bucket" title="페인트 통 (채우기)">
@@ -236,6 +243,9 @@
       <div class="tool" data-tool="eyedropper" title="스포이드">💧</div>
       <div class="tool" data-tool="liquify" title="유동화 (밀기/당기기/부풀리기/회전)">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v6l4-2"/></svg>
+      </div>
+      <div class="tool" data-tool="clone" title="클론 스탬프 / 복구 브러시 (Alt+클릭으로 소스 지정)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="10" height="10" rx="1"/><rect x="10" y="10" width="10" height="10" rx="1"/></svg>
       </div>
       <div class="tool-sep"></div>
       <div class="tool" data-tool="shape" title="도형">▭</div>
@@ -322,7 +332,7 @@
       </div>
 
       <div class="pgroup" id="guideGroup" style="display:none;">
-        <div class="pgroup-title" data-target="guideGroupContent">안내선 &amp; 눈금자<span class="pgroup-arrow">▼</span></div>
+        <div class="pgroup-title" data-target="guideGroupContent">안내선 &amp; 격자<span class="pgroup-arrow">▼</span></div>
         <div class="pgroup-content" id="guideGroupContent" style="display:none;">
           <div style="font-size:11px;color:var(--text-lo);margin-bottom:10px;">캔버스 위쪽/왼쪽 눈금자에서 캔버스 쪽으로 드래그하면 안내선이 생겨요. 아래에서 정확한 수치로도 추가할 수 있어요.</div>
           <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
@@ -338,13 +348,31 @@
             <input type="checkbox" id="guidesVisibleToggle" checked style="width:auto;margin:0;">안내선 표시
           </label>
           <div class="gbtn" id="btnClearGuides">모든 안내선 지우기</div>
+
+          <div style="height:1px;background:var(--line);margin:14px 0;"></div>
+
+          <div class="row-label" style="margin-bottom:8px;"><span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-lo);font-weight:600;">격자 (Grid)</span></div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-hi);cursor:pointer;margin-bottom:8px;">
+            <input type="checkbox" id="gridVisibleToggle" style="width:auto;margin:0;">격자 표시
+          </label>
+          <div class="row">
+            <div class="row-label"><span>격자 간격</span><span class="val" id="v-gridSize">50px</span></div>
+            <input type="range" id="gridSize" min="5" max="300" value="50">
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-hi);cursor:pointer;margin-top:10px;">
+            <input type="checkbox" id="snapToggle" checked style="width:auto;margin:0;">스냅 사용 (격자·안내선·캔버스 중심/모서리에 달라붙기)
+          </label>
         </div>
       </div>
 
       <div class="pgroup" id="selectionGroup" style="display:none;">
         <div class="pgroup-title" data-target="selectionGroupContent">영역 선택<span class="pgroup-arrow">▼</span></div>
         <div class="pgroup-content" id="selectionGroupContent" style="display:none;">
-          <div id="selectionHint" style="font-size:11px;color:var(--text-lo);margin-bottom:10px;">캔버스에 드래그해 사각형 영역을 지정하세요. 브러시/지우개/페인트 통이 이 영역 안에서만 적용돼요.</div>
+          <div id="selectionHint" style="font-size:11px;color:var(--text-lo);margin-bottom:10px;">사각형/올가미/마술봉 중 하나로 영역을 선택하세요. 브러시/지우개/페인트 통이 선택 영역 안에서만 적용돼요. <b>Shift</b>+선택은 추가, <b>Alt</b>+선택은 빼기예요.</div>
+          <div class="row" id="wandOptionsRow" style="display:none;">
+            <div class="row-label"><span>마술봉 허용 오차</span><span class="val" id="v-wandTolerance">20</span></div>
+            <input type="range" id="wandTolerance" min="0" max="100" value="20">
+          </div>
           <div class="color-row"><input type="color" id="selectionFillColor" value="#ff7a3d"><span style="font-size:12px;color:var(--text-lo);">채우기 색상</span></div>
           <div class="btn-grid">
             <div class="gbtn" id="btnFillSelection">영역 채우기</div>
@@ -536,6 +564,33 @@
         </div>
       </div>
 
+      <div class="pgroup" id="cloneOptionsGroup" style="display:none;">
+        <div class="pgroup-title" data-target="cloneGroupContent">클론 스탬프 / 복구 브러시<span class="pgroup-arrow">▼</span></div>
+        <div class="pgroup-content" id="cloneGroupContent" style="display:none;">
+          <div class="row">
+            <div class="row-label"><span>모드</span></div>
+            <select id="cloneMode">
+              <option value="clone">클론 스탬프 (선명하게 복제)</option>
+              <option value="heal">복구 브러시 (가장자리 부드럽게)</option>
+            </select>
+          </div>
+          <div id="cloneHint" style="font-size:11px;color:var(--text-lo);margin:8px 0 10px;"><b>Alt(⌥)+클릭</b>으로 복제할 위치(소스)를 지정한 뒤, 다른 곳을 드래그하면 그 위치를 기준으로 따라오면서 복제해요.</div>
+          <div id="cloneSourceStatus" style="font-size:11px;color:var(--text-lo);margin-bottom:10px;">소스: 지정 안 됨</div>
+          <div class="row">
+            <div class="row-label"><span>브러시 크기</span></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input type="range" id="cloneBrushSize" min="5" max="300" value="60" style="flex:1;">
+              <input type="number" id="cloneBrushSizeNum" min="2" max="800" value="60" style="width:58px;flex:0 0 auto;">
+              <span style="color:var(--text-lo);font-size:12px;">px</span>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-label"><span>불투명도</span><span class="val" id="v-cloneOpacity">100</span></div>
+            <input type="range" id="cloneOpacity" min="1" max="100" value="100">
+          </div>
+        </div>
+      </div>
+
       <div class="pgroup" id="cropGroup" style="display:none;">
         <div class="pgroup-title" data-target="cropGroupContent">자르기<span class="pgroup-arrow">▼</span></div>
         <div class="pgroup-content" id="cropGroupContent" style="display:none;">
@@ -569,7 +624,9 @@
   <div id="tabbar">
     <div id="tabList"></div>
     <button class="topbtn" id="btnNewDocTab" title="새 문서 탭">＋ 새 탭</button>
+    <span id="autosaveStatus" title="브라우저에 자동 저장">자동 저장 대기 중</span>
     <div class="spacer"></div>
+    <button class="topbtn" id="btnAutosaveToggle" title="자동 저장 켜기/끄기">💾 자동 저장 켜짐</button>
     <span style="font-size:11px;color:var(--text-lo);margin-right:4px;">분할</span>
     <div id="splitButtons">
       <button class="split-btn active" data-split="1">1</button>
@@ -781,9 +838,11 @@
   let currentTool = 'move';
   let currentColor = '#ff7a3d';
   let dragMode = null, dragHandle = null, dragStartPt = null, dragOrigLayers = [];
+  let selectDragPt = null;
   let isPainting = false, lastPaintPt = null, paintTarget = null;
   let liquifyTarget = null;
   let liquifyInterval = null;
+  let cloneSource = null, cloneTarget = null, cloneOffset = null, cloneStampSnapshot = null;
   let pendingShape = null;
   let cropRect = null;
   let selection = null;
@@ -867,6 +926,8 @@
     }
     if(!forExport){
       drawGuides();
+      drawSelectionMaskOverlay();
+      drawLassoPreview();
       drawSelectionOverlay();
       drawRulers();
     }
@@ -1073,7 +1134,7 @@
 
   // ---------- Mouse interactions ----------
   canvas.addEventListener('mousedown', e=>{
-    if(!layers.length && currentTool!=='text' && currentTool!=='shape' && currentTool!=='select') return;
+    if(!layers.length && currentTool!=='text' && currentTool!=='shape' && currentTool!=='select' && currentTool!=='lasso' && currentTool!=='wand') return;
     const pt = canvasPointFromEvent(e);
 
     if(currentTool==='move'){
@@ -1142,11 +1203,42 @@
           render();
         }, 40);
       }
+    } else if(currentTool==='clone'){
+      if(e.altKey){
+        cloneSource = pt;
+        $('cloneSourceStatus').textContent = `소스: 지정됨 (${Math.round(pt.x)}, ${Math.round(pt.y)})`;
+        setStatus('복제 소스가 지정됐어요. 이제 원하는 곳을 드래그해서 칠하세요.');
+      } else {
+        if(!cloneSource){ setStatus('먼저 Alt(⌥)+클릭으로 복제할 소스를 지정하세요.'); return; }
+        const layer = ensureCloneTarget();
+        if(!layer){ setStatus('클론 스탬프를 적용할 이미지 레이어를 먼저 선택하세요.'); return; }
+        if(!pointInSelection(pt.x, pt.y)) return;
+        cloneTarget = layer;
+        cloneOffset = { dx: cloneSource.x-pt.x, dy: cloneSource.y-pt.y };
+        cloneStampSnapshot = layer.canvas.getContext('2d').getImageData(0,0,layer.canvas.width,layer.canvas.height);
+        dragMode='clone'; isPainting=true; lastPaintPt=pt;
+        const scaleX = layer.canvas.width/layer.w, scaleY = layer.canvas.height/layer.h;
+        const dp = localPoint(layer, pt.x, pt.y);
+        const sp = localPoint(layer, pt.x+cloneOffset.dx, pt.y+cloneOffset.dy);
+        const destLocal = {x:(dp.x+layer.w/2)*scaleX, y:(dp.y+layer.h/2)*scaleY};
+        const srcLocal = {x:(sp.x+layer.w/2)*scaleX, y:(sp.y+layer.h/2)*scaleY};
+        const radiusPx = Number($('cloneBrushSizeNum').value) * scaleX;
+        cloneDab(layer, destLocal, srcLocal, radiusPx, Number($('cloneOpacity').value), $('cloneMode').value==='heal');
+        render();
+      }
     } else if(currentTool==='select'){
       dragMode='selectnew'; dragStartPt=pt;
-      selection = {x:pt.x, y:pt.y, w:0, h:0};
-      updateSelectionOverlay();
-      refreshSelectionPanel();
+      selectionCombineMode = combineModeFromEvent(e);
+      selectionBoxEl.style.display='block';
+    } else if(currentTool==='lasso'){
+      dragMode='lasso'; dragStartPt=pt;
+      selectionCombineMode = combineModeFromEvent(e);
+      lassoPoints = [pt];
+    } else if(currentTool==='wand'){
+      const combined = combineModeFromEvent(e);
+      const built = buildMagicWandMask(pt.x, pt.y, Number($('wandTolerance').value));
+      if(built) combineSelection(built, combined);
+      else setStatus('선택할 영역을 찾지 못했어요.');
     } else if(currentTool==='shape'){
       dragMode='shape'; dragStartPt=pt;
       pendingShape = addShapeLayer(pt.x, pt.y, 1, 1, $('shapeKindSel').value);
@@ -1164,7 +1256,7 @@
   });
 
   window.addEventListener('mousemove', e=>{
-    if(!dragMode || (!layers.length && dragMode!=='selectnew')) return;
+    if(!dragMode || (!layers.length && dragMode!=='selectnew' && dragMode!=='lasso')) return;
     const pt = canvasPointFromEvent(e);
     if(dragMode==='move'){
       const dx = pt.x-dragStartPt.x, dy = pt.y-dragStartPt.y;
@@ -1201,6 +1293,27 @@
         render();
       }
       lastPaintPt = pt;
+    } else if(dragMode==='clone'){
+      if(pointInSelection(pt.x, pt.y) && cloneTarget){
+        const layer = cloneTarget;
+        const scaleX = layer.canvas.width/layer.w, scaleY = layer.canvas.height/layer.h;
+        const radiusPx = Number($('cloneBrushSizeNum').value) * scaleX;
+        const opacityPct = Number($('cloneOpacity').value);
+        const feather = $('cloneMode').value==='heal';
+        const dist = Math.hypot(pt.x-lastPaintPt.x, pt.y-lastPaintPt.y);
+        const steps = Math.max(1, Math.floor(dist/2));
+        for(let i=0;i<=steps;i++){
+          const t=i/steps;
+          const dx = lastPaintPt.x+(pt.x-lastPaintPt.x)*t, dy = lastPaintPt.y+(pt.y-lastPaintPt.y)*t;
+          const dp = localPoint(layer, dx, dy);
+          const sp = localPoint(layer, dx+cloneOffset.dx, dy+cloneOffset.dy);
+          const destLocal = {x:(dp.x+layer.w/2)*scaleX, y:(dp.y+layer.h/2)*scaleY};
+          const srcLocal = {x:(sp.x+layer.w/2)*scaleX, y:(sp.y+layer.h/2)*scaleY};
+          cloneDab(layer, destLocal, srcLocal, radiusPx, opacityPct, feather);
+        }
+        render();
+      }
+      lastPaintPt = pt;
     } else if(dragMode==='shape'){
       const dx = pt.x-dragStartPt.x, dy = pt.y-dragStartPt.y;
       pendingShape.x = dragStartPt.x + dx/2;
@@ -1209,11 +1322,16 @@
       pendingShape.h = Math.max(4, Math.abs(dy));
       render();
     } else if(dragMode==='selectnew'){
-      selection.x = Math.min(dragStartPt.x, pt.x);
-      selection.y = Math.min(dragStartPt.y, pt.y);
-      selection.w = Math.abs(pt.x-dragStartPt.x);
-      selection.h = Math.abs(pt.y-dragStartPt.y);
-      updateSelectionOverlay();
+      selectDragPt = pt;
+      const x = Math.min(dragStartPt.x, pt.x), y = Math.min(dragStartPt.y, pt.y);
+      const w = Math.abs(pt.x-dragStartPt.x), h = Math.abs(pt.y-dragStartPt.y);
+      const rect = canvas.getBoundingClientRect();
+      const sx = rect.width/canvas.width, sy = rect.height/canvas.height;
+      selectionBoxEl.style.left=(x*sx)+'px'; selectionBoxEl.style.top=(y*sy)+'px';
+      selectionBoxEl.style.width=(w*sx)+'px'; selectionBoxEl.style.height=(h*sy)+'px';
+    } else if(dragMode==='lasso'){
+      lassoPoints.push(pt);
+      render();
     } else if(dragMode==='cropnew'){
       cropRect.x = Math.min(dragStartPt.x, pt.x);
       cropRect.y = Math.min(dragStartPt.y, pt.y);
@@ -1230,16 +1348,31 @@
       if(liquifyInterval){ clearInterval(liquifyInterval); liquifyInterval=null; }
       pushHistory(); refreshLayerPanel();
     }
+    else if(dragMode==='clone'){
+      isPainting=false; cloneTarget=null; cloneStampSnapshot=null;
+      pushHistory(); refreshLayerPanel();
+    }
     else if(['move','resize','rotate','shape'].includes(dragMode)){ pushHistory(); refreshLayerPanel(); }
     else if(dragMode==='selectnew'){
-      if(!selection || selection.w<2 || selection.h<2){ selection=null; }
-      else {
-        selection.x = Math.max(0, Math.round(selection.x));
-        selection.y = Math.max(0, Math.round(selection.y));
-        selection.w = Math.min(canvas.width-selection.x, Math.round(selection.w));
-        selection.h = Math.min(canvas.height-selection.y, Math.round(selection.h));
+      selectionBoxEl.style.display='none';
+      const endPt = selectDragPt || dragStartPt;
+      const x = Math.min(dragStartPt.x, endPt.x), y = Math.min(dragStartPt.y, endPt.y);
+      const w = Math.abs(endPt.x-dragStartPt.x), h = Math.abs(endPt.y-dragStartPt.y);
+      if(w>=2 && h>=2){
+        const built = buildRectMask(x,y,w,h);
+        combineSelection(built, selectionCombineMode);
+      } else {
+        updateSelectionOverlay(); refreshSelectionPanel();
       }
-      updateSelectionOverlay(); refreshSelectionPanel();
+      selectDragPt = null;
+    }
+    else if(dragMode==='lasso'){
+      if(lassoPoints.length>=3){
+        const built = buildPolygonMask(lassoPoints);
+        combineSelection(built, selectionCombineMode);
+      }
+      lassoPoints = [];
+      render();
     }
     dragMode=null; dragHandle=null;
   });
@@ -1254,30 +1387,165 @@
     cropBoxEl.style.height=(cropRect.h*sy)+'px';
   }
 
-  // ---------- Selection (rectangular marquee) ----------
+  // ---------- Selection (mask-based: rectangle / lasso / magic wand) ----------
   const selectionBoxEl = document.getElementById('selection-box');
+  let selectionOverlayCanvas = null;
+  let lassoPoints = [];
+  let selectionCombineMode = 'replace';
+
+  function combineModeFromEvent(e){
+    if(e.shiftKey) return 'add';
+    if(e.altKey) return 'subtract';
+    return 'replace';
+  }
+  function buildRectMask(x,y,w,h){
+    const cw=canvas.width, ch=canvas.height;
+    const mask = new Uint8Array(cw*ch);
+    const x0=Math.max(0,Math.round(x)), y0=Math.max(0,Math.round(y));
+    const x1=Math.min(cw,Math.round(x+w)), y1=Math.min(ch,Math.round(y+h));
+    if(x1<=x0 || y1<=y0) return null;
+    for(let yy=y0; yy<y1; yy++){
+      const row=yy*cw;
+      for(let xx=x0; xx<x1; xx++) mask[row+xx]=1;
+    }
+    return { mask, bounds:{x:x0,y:y0,w:x1-x0,h:y1-y0} };
+  }
+  function maskFromAlphaCanvas(off){
+    const cw=canvas.width, ch=canvas.height;
+    const data = off.getContext('2d').getImageData(0,0,cw,ch).data;
+    const mask = new Uint8Array(cw*ch);
+    let minX=cw,minY=ch,maxX=-1,maxY=-1;
+    for(let i=0;i<cw*ch;i++){
+      if(data[i*4+3]>127){
+        mask[i]=1;
+        const x=i%cw, y=(i/cw)|0;
+        if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+      }
+    }
+    if(maxX<0) return null;
+    return { mask, bounds:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1} };
+  }
+  function buildPolygonMask(points){
+    if(points.length<3) return null;
+    const cw=canvas.width, ch=canvas.height;
+    const off = document.createElement('canvas'); off.width=cw; off.height=ch;
+    const octx = off.getContext('2d');
+    octx.beginPath();
+    octx.moveTo(points[0].x, points[0].y);
+    for(let i=1;i<points.length;i++) octx.lineTo(points[i].x, points[i].y);
+    octx.closePath();
+    octx.fillStyle='#fff';
+    octx.fill();
+    return maskFromAlphaCanvas(off);
+  }
+  function buildMagicWandMask(startX, startY, tolerancePct){
+    const w=canvas.width, h=canvas.height;
+    render(true);
+    const imgData = ctx.getImageData(0,0,w,h).data;
+    render();
+    startX=Math.floor(startX); startY=Math.floor(startY);
+    if(startX<0||startY<0||startX>=w||startY>=h) return null;
+    const idx0=(startY*w+startX)*4;
+    const tR=imgData[idx0],tG=imgData[idx0+1],tB=imgData[idx0+2],tA=imgData[idx0+3];
+    const tol=(tolerancePct/100)*260;
+    function matches(i){
+      const dr=imgData[i]-tR, dg=imgData[i+1]-tG, db=imgData[i+2]-tB, da=imgData[i+3]-tA;
+      return Math.sqrt(dr*dr+dg*dg+db*db+da*da)<=tol;
+    }
+    const mask = new Uint8Array(w*h);
+    const visited = new Uint8Array(w*h);
+    const stack=[startY*w+startX];
+    visited[startY*w+startX]=1;
+    let minX=w,minY=h,maxX=-1,maxY=-1;
+    while(stack.length){
+      const p=stack.pop();
+      mask[p]=1;
+      const x=p%w, y=(p/w)|0;
+      if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+      const i=p*4;
+      if(x+1<w && !visited[p+1] && matches(i+4)){visited[p+1]=1; stack.push(p+1);}
+      if(x-1>=0 && !visited[p-1] && matches(i-4)){visited[p-1]=1; stack.push(p-1);}
+      if(y+1<h && !visited[p+w] && matches(i+w*4)){visited[p+w]=1; stack.push(p+w);}
+      if(y-1>=0 && !visited[p-w] && matches(i-w*4)){visited[p-w]=1; stack.push(p-w);}
+    }
+    if(maxX<0) return null;
+    return { mask, bounds:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1} };
+  }
+  function combineSelection(newSel, mode){
+    if(!newSel){ return; }
+    if(mode==='replace' || !selection || !selection.mask){
+      selection = newSel;
+    } else {
+      const cw=canvas.width, ch=canvas.height;
+      const combined = new Uint8Array(cw*ch);
+      let minX=cw,minY=ch,maxX=-1,maxY=-1;
+      for(let i=0;i<combined.length;i++){
+        let v;
+        if(mode==='add') v = (selection.mask[i]||newSel.mask[i]) ? 1:0;
+        else v = (selection.mask[i] && !newSel.mask[i]) ? 1:0;
+        combined[i]=v;
+        if(v){ const x=i%cw, y=(i/cw)|0; if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y; }
+      }
+      selection = maxX<0 ? null : { mask:combined, bounds:{x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1} };
+    }
+    buildSelectionOverlayCanvas();
+    updateSelectionOverlay();
+    refreshSelectionPanel();
+  }
+  function buildSelectionOverlayCanvas(){
+    if(!selection || !selection.mask){ selectionOverlayCanvas = null; return; }
+    const w=canvas.width, h=canvas.height;
+    const off = document.createElement('canvas'); off.width=w; off.height=h;
+    const octx = off.getContext('2d');
+    const imgData = octx.createImageData(w,h);
+    const mask = selection.mask;
+    for(let i=0;i<mask.length;i++){
+      if(mask[i]){
+        const p=i*4;
+        imgData.data[p]=79; imgData.data[p+1]=195; imgData.data[p+2]=247; imgData.data[p+3]=90;
+      }
+    }
+    octx.putImageData(imgData,0,0);
+    selectionOverlayCanvas = off;
+  }
+  function drawSelectionMaskOverlay(){
+    if(!selectionOverlayCanvas) return;
+    ctx.save();
+    ctx.drawImage(selectionOverlayCanvas,0,0);
+    ctx.restore();
+  }
+  function drawLassoPreview(){
+    if(!lassoPoints.length) return;
+    ctx.save();
+    ctx.strokeStyle = '#4fc3f7';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+    for(let i=1;i<lassoPoints.length;i++) ctx.lineTo(lassoPoints[i].x, lassoPoints[i].y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
   function updateSelectionOverlay(){
-    if(!selection){ selectionBoxEl.style.display='none'; return; }
-    const rect = canvas.getBoundingClientRect();
-    const sx = rect.width/canvas.width, sy = rect.height/canvas.height;
-    selectionBoxEl.style.display='block';
-    selectionBoxEl.style.left=(selection.x*sx)+'px';
-    selectionBoxEl.style.top=(selection.y*sy)+'px';
-    selectionBoxEl.style.width=(selection.w*sx)+'px';
-    selectionBoxEl.style.height=(selection.h*sy)+'px';
+    selectionBoxEl.style.display='none';
   }
   function refreshSelectionPanel(){
-    $('selectionGroup').style.display = (currentTool==='select' || selection) ? 'block' : 'none';
+    $('selectionGroup').style.display = (['select','lasso','wand'].includes(currentTool) || selection) ? 'block' : 'none';
+    $('wandOptionsRow').style.display = currentTool==='wand' ? 'block' : 'none';
   }
   function pointInSelection(px,py){
-    if(!selection) return true;
-    return px>=selection.x && px<=selection.x+selection.w && py>=selection.y && py<=selection.y+selection.h;
+    if(!selection || !selection.mask) return true;
+    const x=Math.floor(px), y=Math.floor(py);
+    if(x<0||y<0||x>=canvas.width||y>=canvas.height) return false;
+    return !!selection.mask[y*canvas.width+x];
   }
   function selectionLocalBounds(layer){
     if(!selection) return null;
+    const b = selection.bounds;
     const corners = [
-      [selection.x, selection.y], [selection.x+selection.w, selection.y],
-      [selection.x, selection.y+selection.h], [selection.x+selection.w, selection.y+selection.h]
+      [b.x, b.y], [b.x+b.w, b.y],
+      [b.x, b.y+b.h], [b.x+b.w, b.y+b.h]
     ];
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     corners.forEach(([cx,cy])=>{
@@ -1292,8 +1560,18 @@
       maxX: Math.min(layer.canvas.width, Math.ceil(maxX)), maxY: Math.min(layer.canvas.height, Math.ceil(maxY))
     };
   }
+  function layerLocalPixelToCanvasPoint(layer, lx, ly){
+    const ux = (lx/layer.canvas.width)*layer.w - layer.w/2;
+    const uy = (ly/layer.canvas.height)*layer.h - layer.h/2;
+    const rad = layer.rotation*Math.PI/180;
+    const rx = ux*Math.cos(rad) - uy*Math.sin(rad);
+    const ry = ux*Math.sin(rad) + uy*Math.cos(rad);
+    return { x: layer.x+rx, y: layer.y+ry };
+  }
   function deselect(){
     selection = null;
+    selectionOverlayCanvas = null;
+    lassoPoints = [];
     updateSelectionOverlay(); refreshSelectionPanel();
   }
   $('btnDeselect').addEventListener('click', deselect);
@@ -1303,9 +1581,18 @@
     const layer = paintTarget; if(!layer) return;
     const b = selectionLocalBounds(layer); if(!b) return;
     const lctx = layer.canvas.getContext('2d');
-    lctx.save(); lctx.fillStyle = $('selectionFillColor').value;
-    lctx.fillRect(b.minX, b.minY, b.maxX-b.minX, b.maxY-b.minY);
-    lctx.restore();
+    const imgData = lctx.getImageData(0,0,layer.canvas.width,layer.canvas.height);
+    const fill = hexToRgb($('selectionFillColor').value);
+    for(let ly=b.minY; ly<b.maxY; ly++){
+      for(let lx=b.minX; lx<b.maxX; lx++){
+        const cp = layerLocalPixelToCanvasPoint(layer, lx, ly);
+        if(pointInSelection(cp.x, cp.y)){
+          const i=(ly*layer.canvas.width+lx)*4;
+          imgData.data[i]=fill.r; imgData.data[i+1]=fill.g; imgData.data[i+2]=fill.b; imgData.data[i+3]=255;
+        }
+      }
+    }
+    lctx.putImageData(imgData,0,0);
     render(); pushHistory(); refreshLayerPanel();
     setStatus('선택 영역을 채웠습니다.');
   });
@@ -1314,7 +1601,18 @@
     const layer = selectedIds.length===1 ? layers.find(l=>l.id===selectedIds[0]) : null;
     if(!layer || layer.type!=='raster'){ setStatus('영역을 지우려면 래스터 레이어를 먼저 선택하세요.'); return; }
     const b = selectionLocalBounds(layer);
-    layer.canvas.getContext('2d').clearRect(b.minX, b.minY, b.maxX-b.minX, b.maxY-b.minY);
+    const lctx = layer.canvas.getContext('2d');
+    const imgData = lctx.getImageData(0,0,layer.canvas.width,layer.canvas.height);
+    for(let ly=b.minY; ly<b.maxY; ly++){
+      for(let lx=b.minX; lx<b.maxX; lx++){
+        const cp = layerLocalPixelToCanvasPoint(layer, lx, ly);
+        if(pointInSelection(cp.x, cp.y)){
+          const i=(ly*layer.canvas.width+lx)*4;
+          imgData.data[i+3]=0;
+        }
+      }
+    }
+    lctx.putImageData(imgData,0,0);
     render(); pushHistory(); refreshLayerPanel();
     setStatus('선택 영역을 지웠습니다.');
   });
@@ -1459,6 +1757,47 @@
   });
   $('liquifyStrength').addEventListener('input', ()=>{ $('v-liqstrength').textContent = Number($('liquifyStrength').value).toFixed(1); });
 
+  // ---------- Clone stamp / healing brush ----------
+  function ensureCloneTarget(){
+    if(selectedIds.length===1){
+      const layer = layers.find(l=>l.id===selectedIds[0]);
+      if(layer && layer.type==='raster') return layer;
+    }
+    return null;
+  }
+  function cloneDab(layer, destLocal, srcLocal, radiusPx, opacityPct, feather){
+    const w=layer.canvas.width, h=layer.canvas.height;
+    const minX=Math.max(0,Math.floor(destLocal.x-radiusPx)), maxX=Math.min(w-1,Math.ceil(destLocal.x+radiusPx));
+    const minY=Math.max(0,Math.floor(destLocal.y-radiusPx)), maxY=Math.min(h-1,Math.ceil(destLocal.y+radiusPx));
+    if(maxX<=minX || maxY<=minY || !cloneStampSnapshot) return;
+    const lctx = layer.canvas.getContext('2d');
+    const regionW=maxX-minX+1, regionH=maxY-minY+1;
+    const destData = lctx.getImageData(minX,minY,regionW,regionH);
+    const srcW=cloneStampSnapshot.width, srcH=cloneStampSnapshot.height;
+    const dx = srcLocal.x-destLocal.x, dy = srcLocal.y-destLocal.y;
+    for(let y=minY;y<=maxY;y++){
+      for(let x=minX;x<=maxX;x++){
+        const dist = Math.hypot(x-destLocal.x, y-destLocal.y);
+        if(dist>radiusPx) continue;
+        const sx=x+dx, sy=y+dy;
+        if(sx<0||sy<0||sx>=srcW||sy>=srcH) continue;
+        const srcPixel = bilinearSample(cloneStampSnapshot.data, srcW, srcH, sx, sy);
+        let alpha = opacityPct/100;
+        if(feather){ const t=1-dist/radiusPx; alpha *= t*t*(3-2*t); }
+        const di = ((y-minY)*regionW+(x-minX))*4;
+        for(let c=0;c<3;c++) destData.data[di+c] = destData.data[di+c]*(1-alpha)+srcPixel[c]*alpha;
+        destData.data[di+3] = Math.min(255, srcPixel[3]*alpha + destData.data[di+3]*(1-alpha));
+      }
+    }
+    lctx.putImageData(destData, minX, minY);
+  }
+  $('cloneBrushSize').addEventListener('input', ()=>{ $('cloneBrushSizeNum').value = $('cloneBrushSize').value; });
+  $('cloneBrushSizeNum').addEventListener('input', ()=>{
+    const v = Math.max(2, Math.min(800, Number($('cloneBrushSizeNum').value)||2));
+    if(v<=300) $('cloneBrushSize').value = v;
+  });
+  $('cloneOpacity').addEventListener('input', ()=>{ $('v-cloneOpacity').textContent = $('cloneOpacity').value; });
+
   // ---------- Eyedropper ----------
   function samplePixel(px,py){
     render(true);
@@ -1519,6 +1858,7 @@
     setStatus('페인트 통으로 영역을 채웠습니다.');
   }
   $('bucketTolerance').addEventListener('input', ()=>{ $('v-tolerance').textContent = $('bucketTolerance').value; });
+  $('wandTolerance').addEventListener('input', ()=>{ $('v-wandTolerance').textContent = $('wandTolerance').value; });
 
   // ---------- Sharpen (baked into raster layer pixels) ----------
   function bakeSharpen(layer, amount){
@@ -1709,8 +2049,9 @@
     const w = Math.min(canvas.width, Math.round(b.maxX)) - x;
     const h = Math.min(canvas.height, Math.round(b.maxY)) - y;
     if(w<1 || h<1) return;
-    selection = {x,y,w,h};
-    updateSelectionOverlay(); refreshSelectionPanel(); render();
+    const built = buildRectMask(x,y,w,h);
+    combineSelection(built, 'replace');
+    render();
     setStatus('선택된 레이어 영역으로 선택 영역을 만들었어요.');
   });
 
@@ -2074,8 +2415,10 @@
   }
 
   const TOOL_PANEL_MAP = {
-    select:'selectionGroupContent', brush:'brushGroupContent', eraser:'brushGroupContent', bucket:'bucketGroupContent',
-    shape:'shapeGroupContent', text:'textGroupContent', crop:'cropGroupContent', liquify:'liquifyGroupContent'
+    select:'selectionGroupContent', lasso:'selectionGroupContent', wand:'selectionGroupContent',
+    brush:'brushGroupContent', eraser:'brushGroupContent', bucket:'bucketGroupContent',
+    shape:'shapeGroupContent', text:'textGroupContent', crop:'cropGroupContent', liquify:'liquifyGroupContent',
+    clone:'cloneGroupContent'
   };
   function expandGroup(contentId){
     const content = document.getElementById(contentId);
@@ -2096,6 +2439,7 @@
       $('brushOptionsGroup').style.display = (tool==='brush'||tool==='eraser') ? 'block':'none';
       $('bucketOptionsGroup').style.display = tool==='bucket' ? 'block':'none';
       $('liquifyOptionsGroup').style.display = tool==='liquify' ? 'block':'none';
+      $('cloneOptionsGroup').style.display = tool==='clone' ? 'block':'none';
       $('cropGroup').style.display = tool==='crop' ? 'block':'none';
       cropBoxEl.style.display='none'; cropRect=null;
       canvas.style.cursor = tool==='move' ? 'default' : tool==='eyedropper' ? 'crosshair' : tool==='text' ? 'text' : 'crosshair';
@@ -2575,6 +2919,7 @@
     if(historyStack.length>25) historyStack.shift();
     historyIndex = historyStack.length-1;
     updateHistButtons();
+    scheduleAutosave();
   }
   function restoreHistoryEntry(entry){
     const sizeChanged = canvas.width!==entry.w || canvas.height!==entry.h;
@@ -2686,8 +3031,10 @@
     guides = doc.guides;
     guidesVisible = doc.guidesVisible;
     $('guidesVisibleToggle').checked = guidesVisible;
-    selection = null; updateSelectionOverlay();
+    selection = null; selectionOverlayCanvas = null; lassoPoints = []; updateSelectionOverlay();
     cropRect = null; cropBoxEl.style.display = 'none';
+    cloneSource = null; cloneTarget = null; cloneStampSnapshot = null;
+    if($('cloneSourceStatus')) $('cloneSourceStatus').textContent = '소스: 지정 안 됨';
     activeDocIndex = idx;
     if(doc.width>0){ empty.style.display='none'; holder.style.display='block'; rulerGrid.style.display='grid'; }
     else { empty.style.display='flex'; holder.style.display='none'; rulerGrid.style.display='none'; }
@@ -3039,7 +3386,120 @@
   });
   addChatMessage('안녕하세요! 편집 명령을 채팅으로 내려보세요. 예: "밝기 20 올려줘". "도움말"을 입력하면 전체 명령 목록을 볼 수 있어요.', 'bot');
 
-  createNewDoc('무제 1');
+  // ---------- Autosave (browser local storage) ----------
+  const AUTOSAVE_KEY = 'pixelforge_autosave_v1';
+  let autosaveEnabled = true;
+  let autosaveTimer = null;
+  let autosaveBlocked = false;
+
+  function setAutosaveStatus(msg){ $('autosaveStatus').textContent = msg; }
+
+  function serializeLayerForSave(l){
+    const base = {id:l.id, type:l.type, name:l.name, x:l.x, y:l.y, w:l.w, h:l.h, rotation:l.rotation,
+      flipH:l.flipH, flipV:l.flipV, opacity:l.opacity, blend:l.blend, visible:l.visible,
+      adjustments:l.adjustments, filterPreset:l.filterPreset, groupId:l.groupId||null,
+      skewX:l.skewX||0, skewY:l.skewY||0};
+    if(l.type==='raster') base.dataUrl = l.canvas.toDataURL('image/png');
+    if(l.type==='text') base.text = l.text;
+    if(l.type==='shape') base.shape = l.shape;
+    if(l.type==='group'){ base.childIds = l.childIds; base.collapsed = l.collapsed; }
+    return base;
+  }
+  function serializeDocForSave(doc, isActive){
+    return {
+      id: doc.id, name: doc.name,
+      width: isActive ? canvas.width : doc.width,
+      height: isActive ? canvas.height : doc.height,
+      layers: (isActive ? layers : doc.layers).map(serializeLayerForSave),
+      guides: isActive ? guides : doc.guides,
+      guidesVisible: isActive ? guidesVisible : doc.guidesVisible,
+      zoomPct: isActive ? currentZoomPct : doc.zoomPct
+    };
+  }
+  function performAutosave(){
+    if(!autosaveEnabled || autosaveBlocked || !documents.length) return;
+    try{
+      const data = {
+        version: 1, savedAt: Date.now(), activeDocIndex,
+        documents: documents.map((doc,i)=>serializeDocForSave(doc, i===activeDocIndex))
+      };
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(data));
+      setAutosaveStatus('자동 저장됨 · ' + new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
+    }catch(err){
+      autosaveBlocked = true;
+      setAutosaveStatus('자동 저장 실패 (저장 공간 부족) — PSD로 직접 저장해주세요');
+    }
+  }
+  function scheduleAutosave(){
+    if(!autosaveEnabled) return;
+    setAutosaveStatus('자동 저장 예정…');
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(performAutosave, 2000);
+  }
+  $('btnAutosaveToggle').addEventListener('click', ()=>{
+    autosaveEnabled = !autosaveEnabled;
+    $('btnAutosaveToggle').textContent = autosaveEnabled ? '💾 자동 저장 켜짐' : '💾 자동 저장 꺼짐';
+    if(autosaveEnabled){ autosaveBlocked=false; scheduleAutosave(); }
+    else { clearTimeout(autosaveTimer); setAutosaveStatus('자동 저장 꺼짐'); }
+  });
+
+  function loadImageAsync(dataUrl){
+    return new Promise((resolve,reject)=>{
+      const img = new Image();
+      img.onload = ()=>resolve(img);
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+  async function deserializeDocument(savedDoc){
+    const newLayers = [];
+    for(const sl of savedDoc.layers){
+      const layer = {...sl};
+      if(sl.type==='raster'){
+        const img = await loadImageAsync(sl.dataUrl);
+        const c = document.createElement('canvas'); c.width=img.width; c.height=img.height;
+        c.getContext('2d').drawImage(img,0,0);
+        layer.canvas = c;
+        delete layer.dataUrl;
+      }
+      newLayers.push(layer);
+    }
+    return { id:savedDoc.id, name:savedDoc.name, width:savedDoc.width, height:savedDoc.height,
+      layers:newLayers, selectedIds:[], historyStack:[], historyIndex:-1,
+      guides:savedDoc.guides||[], guidesVisible:savedDoc.guidesVisible!==false,
+      zoomPct:savedDoc.zoomPct||100, thumbnail:null };
+  }
+  async function restoreAutosave(){
+    let raw;
+    try{ raw = localStorage.getItem(AUTOSAVE_KEY); }catch(err){ return false; }
+    if(!raw) return false;
+    let data;
+    try{ data = JSON.parse(raw); }catch(e){ return false; }
+    if(!data.documents || !data.documents.length) return false;
+    try{
+      const restoredDocs = [];
+      for(const sd of data.documents) restoredDocs.push(await deserializeDocument(sd));
+      documents = restoredDocs;
+      activeDocIndex = -1;
+      loadDocIntoActive(Math.min(data.activeDocIndex||0, documents.length-1));
+      pushHistory();
+      return true;
+    }catch(err){
+      return false;
+    }
+  }
+
+  (async function bootstrap(){
+    setAutosaveStatus('이전 작업 확인 중…');
+    const restored = await restoreAutosave();
+    if(restored){
+      setStatus('이전 작업을 자동으로 불러왔어요.');
+      setAutosaveStatus('이전 작업 복원됨');
+    } else {
+      createNewDoc('무제 1');
+      setAutosaveStatus('자동 저장 대기 중');
+    }
+  })();
 })();
 </script>
 </body>
