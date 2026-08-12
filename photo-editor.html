@@ -86,6 +86,7 @@
   .split-btn{width:26px;height:26px;background:var(--bg-2);border:1px solid var(--line);border-radius:4px;color:var(--text-lo);font-size:11px;cursor:pointer;font-family:var(--mono);}
   .split-btn:hover{background:var(--bg-3);}
   .split-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+  .text-align-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
 
   #chatWidget{position:fixed;right:20px;bottom:56px;z-index:90;font-family:var(--sans);}
   #chatToggleBtn{width:48px;height:48px;border-radius:50%;background:var(--accent);border:none;color:#1a0d05;font-size:20px;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.4);}
@@ -225,32 +226,32 @@
 
   <div id="body">
     <div id="tools">
-      <div class="tool active" data-tool="move" title="이동 / 레이어 선택 / 변형">✥</div>
-      <div class="tool" data-tool="select" title="영역 선택 (사각형)">
+      <div class="tool active" data-tool="move" title="이동 / 레이어 선택 / 변형 (V)">✥</div>
+      <div class="tool" data-tool="select" title="영역 선택 (사각형) (M)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
       </div>
-      <div class="tool" data-tool="lasso" title="올가미 (자유형 선택)">
+      <div class="tool" data-tool="lasso" title="올가미 (자유형 선택) (L)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 15a5 5 0 1 1 6.5 4.77M13.5 19.77 12 22l-1-2.5"/><path d="M12.5 12.5a3 3 0 1 0 4 4"/></svg>
       </div>
-      <div class="tool" data-tool="wand" title="마술봉 (비슷한 색 자동 선택)">
+      <div class="tool" data-tool="wand" title="마술봉 (비슷한 색 자동 선택) (W)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 4 1.5 1.5"/><path d="M2 22l9-9"/><path d="M14.5 6.5 17 4l3 3-2.5 2.5z"/><path d="M18 9l1.5 1.5"/><path d="M11 6l1 1"/><path d="M18 3l1 1"/></svg>
       </div>
-      <div class="tool" data-tool="brush" title="브러시">✎</div>
-      <div class="tool" data-tool="eraser" title="지우개">⌫</div>
-      <div class="tool" data-tool="bucket" title="페인트 통 (채우기)">
+      <div class="tool" data-tool="brush" title="브러시 (B)">✎</div>
+      <div class="tool" data-tool="eraser" title="지우개 (E)">⌫</div>
+      <div class="tool" data-tool="bucket" title="페인트 통 (채우기) (G)">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/></svg>
       </div>
-      <div class="tool" data-tool="eyedropper" title="스포이드">💧</div>
-      <div class="tool" data-tool="liquify" title="유동화 (밀기/당기기/부풀리기/회전)">
+      <div class="tool" data-tool="eyedropper" title="스포이드 (I)">💧</div>
+      <div class="tool" data-tool="liquify" title="유동화 (밀기/당기기/부풀리기/회전) (Q)">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v6l4-2"/></svg>
       </div>
-      <div class="tool" data-tool="clone" title="클론 스탬프 / 복구 브러시 (Alt+클릭으로 소스 지정)">
+      <div class="tool" data-tool="clone" title="클론 스탬프 / 복구 브러시 (Alt+클릭으로 소스 지정) (S)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="10" height="10" rx="1"/><rect x="10" y="10" width="10" height="10" rx="1"/></svg>
       </div>
       <div class="tool-sep"></div>
-      <div class="tool" data-tool="shape" title="도형">▭</div>
-      <div class="tool" data-tool="text" title="텍스트">T</div>
-      <div class="tool" data-tool="crop" title="자르기">⛶</div>
+      <div class="tool" data-tool="shape" title="도형 (U)">▭</div>
+      <div class="tool" data-tool="text" title="텍스트 (T)">T</div>
+      <div class="tool" data-tool="crop" title="자르기 (C)">⛶</div>
       <div class="tool-sep"></div>
       <div class="tool" data-tool="rotL" title="선택 레이어 왼쪽 회전">↺</div>
       <div class="tool" data-tool="rotR" title="선택 레이어 오른쪽 회전">↻</div>
@@ -515,16 +516,32 @@
       <div class="pgroup" id="textGroup" style="display:none;">
         <div class="pgroup-title" data-target="textGroupContent">텍스트<span class="pgroup-arrow">▼</span></div>
         <div class="pgroup-content" id="textGroupContent" style="display:none;">
-          <textarea id="textContentEdit" placeholder="텍스트 입력"></textarea>
+          <textarea id="textContentEdit" placeholder="텍스트 입력 (Enter로 줄바꿈)"></textarea>
           <div class="row" style="margin-top:8px;"><div class="row-label"><span>크기</span><span class="val" id="v-tsize">48</span></div><input type="range" id="textSize" min="10" max="200" value="48"></div>
           <div class="color-row"><input type="color" id="textColor" value="#ffffff"><span style="font-size:12px;color:var(--text-lo);">텍스트 색상</span></div>
-          <select id="textFont">
+          <select id="textFont" style="margin-bottom:10px;">
             <option value="sans-serif">고딕(Sans)</option>
             <option value="serif">명조(Serif)</option>
             <option value="monospace">고정폭(Mono)</option>
             <option value="'Georgia',serif">Georgia</option>
             <option value="'Times New Roman',serif">Times</option>
           </select>
+          <div class="row">
+            <div class="row-label"><span>정렬</span></div>
+            <div class="btn-grid" style="grid-template-columns:1fr 1fr 1fr;">
+              <div class="gbtn text-align-btn active" data-align="left">왼쪽</div>
+              <div class="gbtn text-align-btn" data-align="center">가운데</div>
+              <div class="gbtn text-align-btn" data-align="right">오른쪽</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="row-label"><span>자간</span><span class="val" id="v-letterSpacing">0px</span></div>
+            <input type="range" id="textLetterSpacing" min="-10" max="40" value="0">
+          </div>
+          <div class="row">
+            <div class="row-label"><span>줄간격</span><span class="val" id="v-lineHeight">1.2</span></div>
+            <input type="range" id="textLineHeight" min="0.8" max="3" step="0.1" value="1.2">
+          </div>
         </div>
       </div>
 
@@ -840,6 +857,46 @@
     </div>
   </div>
 
+  <div id="exportModal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title">이미지 내보내기</div>
+
+      <div class="modal-row">
+        <label class="modal-label">파일 형식</label>
+        <div class="bg-options" id="exportFormatOptions">
+          <div class="bg-opt active" data-format="png">PNG</div>
+          <div class="bg-opt" data-format="jpeg">JPEG</div>
+          <div class="bg-opt" data-format="webp">WebP</div>
+        </div>
+      </div>
+
+      <div class="modal-row" id="exportQualityRow" style="display:none;">
+        <label class="modal-label">화질</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="range" id="exportQuality" min="1" max="100" value="90" style="flex:1;">
+          <span id="v-exportQuality" style="font-family:var(--mono);color:var(--accent);font-size:13px;width:40px;text-align:right;">90%</span>
+        </div>
+      </div>
+
+      <div class="modal-row" id="exportBgRow" style="display:none;">
+        <label class="modal-label">배경색 (JPEG는 투명을 지원하지 않아요)</label>
+        <div class="bg-options" id="exportBgOptions">
+          <div class="bg-opt active" data-bg="white">흰색</div>
+          <div class="bg-opt" data-bg="black">검정</div>
+        </div>
+      </div>
+
+      <div class="modal-row" style="margin-bottom:0;">
+        <div id="exportSizeHint" style="font-size:11px;color:var(--text-lo);">PNG는 무손실이라 파일이 더 커요. JPEG/WebP는 화질을 낮출수록 용량이 작아져요.</div>
+      </div>
+
+      <div class="modal-actions">
+        <div class="gbtn" id="btnExportCancel">취소</div>
+        <div class="gbtn primary-modal" id="btnExportConfirm">다운로드</div>
+      </div>
+    </div>
+  </div>
+
   <div id="chatWidget">
     <button id="chatToggleBtn" title="명령 챗봇">💬</button>
     <div id="chatPanel">
@@ -903,7 +960,7 @@
   function addTextLayer(x,y,content){
     const layer = {id:makeId(), type:'text', name:'텍스트', x,y, w:200,h:60, rotation:0, flipH:false, flipV:false,
       opacity:100, blend:'source-over', visible:true, adjustments:blankAdj(), filterPreset:'none',
-      text:{content:content||'텍스트', font:'sans-serif', size:48, color:'#ffffff', weight:'700'}};
+      text:{content:content||'텍스트', font:'sans-serif', size:48, color:'#ffffff', weight:'700', align:'left', letterSpacing:0, lineHeight:1.2}};
     layers.push(layer);
     return layer;
   }
@@ -1049,20 +1106,34 @@
     const t = layer.text;
     c.font = `${t.weight} ${t.size}px ${t.font}`;
     c.textBaseline = 'middle';
-    const metrics = c.measureText(t.content || ' ');
-    layer.w = Math.max(metrics.width, 10);
-    layer.h = t.size*1.2;
+    c.textAlign = 'left';
+    if('letterSpacing' in c) c.letterSpacing = (t.letterSpacing||0)+'px';
+    const lines = (t.content || ' ').split('\n');
+    const lineHeight = t.size * (t.lineHeight || 1.2);
+    let maxWidth = 0;
+    lines.forEach(line=>{ const w = c.measureText(line).width; if(w>maxWidth) maxWidth = w; });
+    layer.w = Math.max(maxWidth, 10);
+    layer.h = lineHeight * lines.length;
+    const startY = -layer.h/2 + lineHeight/2;
+    const align = t.align || 'left';
+    function lineX(line){
+      const lw = c.measureText(line).width;
+      if(align==='center') return -lw/2;
+      if(align==='right') return layer.w/2 - lw;
+      return -layer.w/2;
+    }
     if(layer.style && layer.style.stroke && layer.style.stroke.enabled){
       c.save();
       c.shadowColor = 'rgba(0,0,0,0)'; c.shadowBlur = 0;
       c.strokeStyle = layer.style.stroke.color;
       c.lineWidth = layer.style.stroke.width*2;
       c.lineJoin = 'round';
-      c.strokeText(t.content, -layer.w/2, 0);
+      lines.forEach((line,i)=>{ c.strokeText(line, lineX(line), startY+i*lineHeight); });
       c.restore();
     }
     c.fillStyle = t.color;
-    c.fillText(t.content, -layer.w/2, 0);
+    lines.forEach((line,i)=>{ c.fillText(line, lineX(line), startY+i*lineHeight); });
+    if('letterSpacing' in c) c.letterSpacing = '0px';
   }
 
   // ---------- PSD blend mode mapping ----------
@@ -2340,6 +2411,10 @@
       $('textSize').value = layer.text.size; $('v-tsize').textContent = layer.text.size;
       $('textColor').value = layer.text.color;
       $('textFont').value = layer.text.font;
+      const align = layer.text.align || 'left';
+      document.querySelectorAll('.text-align-btn').forEach(b=>b.classList.toggle('active', b.dataset.align===align));
+      $('textLetterSpacing').value = layer.text.letterSpacing||0; $('v-letterSpacing').textContent = (layer.text.letterSpacing||0)+'px';
+      $('textLineHeight').value = layer.text.lineHeight||1.2; $('v-lineHeight').textContent = (layer.text.lineHeight||1.2).toFixed(1);
     }
     if(layer.type==='shape'){
       $('shapeFill').value = layer.shape.fill;
@@ -2533,6 +2608,28 @@
     const layer = activeLayer(); if(!layer || layer.type!=='text') return;
     layer.text.font = $('textFont').value; render(); pushHistory();
   });
+  document.querySelectorAll('.text-align-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const layer = activeLayer(); if(!layer || layer.type!=='text') return;
+      layer.text.align = btn.dataset.align;
+      document.querySelectorAll('.text-align-btn').forEach(b=>b.classList.toggle('active', b===btn));
+      render(); pushHistory();
+    });
+  });
+  $('textLetterSpacing').addEventListener('input', ()=>{
+    const layer = activeLayer(); if(!layer || layer.type!=='text') return;
+    layer.text.letterSpacing = Number($('textLetterSpacing').value);
+    $('v-letterSpacing').textContent = layer.text.letterSpacing+'px';
+    render();
+  });
+  $('textLetterSpacing').addEventListener('change', ()=>{ if(activeLayer()) pushHistory(); });
+  $('textLineHeight').addEventListener('input', ()=>{
+    const layer = activeLayer(); if(!layer || layer.type!=='text') return;
+    layer.text.lineHeight = Number($('textLineHeight').value);
+    $('v-lineHeight').textContent = layer.text.lineHeight.toFixed(1);
+    render();
+  });
+  $('textLineHeight').addEventListener('change', ()=>{ if(activeLayer()) pushHistory(); });
 
   // Shape bindings
   ['shapeFill','shapeStroke'].forEach(id=>{
@@ -3156,19 +3253,74 @@
   $('btnRedo').addEventListener('click', redo);
 
   // ---------- Download ----------
-  $('btnDownload').addEventListener('click', ()=>{
+  function performExport(format, qualityPct, bg){
     render(true);
-    const link = document.createElement('a');
-    link.download = 'edited-image.png';
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    let dataUrl, ext;
+    if(format==='jpeg'){
+      const off = document.createElement('canvas'); off.width=canvas.width; off.height=canvas.height;
+      const octx = off.getContext('2d');
+      octx.fillStyle = bg==='black' ? '#000000' : '#ffffff';
+      octx.fillRect(0,0,off.width,off.height);
+      octx.drawImage(canvas,0,0);
+      dataUrl = off.toDataURL('image/jpeg', (qualityPct||90)/100);
+      ext = 'jpg';
+    } else if(format==='webp'){
+      dataUrl = canvas.toDataURL('image/webp', (qualityPct||90)/100);
+      ext = 'webp';
+    } else {
+      dataUrl = canvas.toDataURL('image/png');
+      ext = 'png';
+    }
     render();
-    setStatus('이미지 다운로드 완료');
+    const link = document.createElement('a');
+    link.download = `edited-image.${ext}`;
+    link.href = dataUrl;
+    link.click();
+    setStatus(`이미지를 ${format.toUpperCase()} 형식으로 다운로드했어요.`);
+  }
+  let exportFormat = 'png', exportBg = 'white';
+  function openExportModal(){
+    if(!layers.length) return;
+    $('exportModal').classList.add('show');
+  }
+  function closeExportModal(){ $('exportModal').classList.remove('show'); }
+  document.querySelectorAll('#exportFormatOptions .bg-opt').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('#exportFormatOptions .bg-opt').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      exportFormat = b.dataset.format;
+      $('exportQualityRow').style.display = exportFormat==='png' ? 'none' : 'block';
+      $('exportBgRow').style.display = exportFormat==='jpeg' ? 'block' : 'none';
+    });
+  });
+  document.querySelectorAll('#exportBgOptions .bg-opt').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('#exportBgOptions .bg-opt').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      exportBg = b.dataset.bg;
+    });
+  });
+  $('exportQuality').addEventListener('input', ()=>{ $('v-exportQuality').textContent = $('exportQuality').value+'%'; });
+  $('btnDownload').addEventListener('click', openExportModal);
+  $('btnExportCancel').addEventListener('click', closeExportModal);
+  $('exportModal').addEventListener('click', e=>{ if(e.target.id==='exportModal') closeExportModal(); });
+  $('btnExportConfirm').addEventListener('click', ()=>{
+    performExport(exportFormat, Number($('exportQuality').value), exportBg);
+    closeExportModal();
   });
 
   // ---------- Keyboard shortcuts ----------
+  const TOOL_SHORTCUTS = {
+    v:'move', m:'select', l:'lasso', w:'wand', b:'brush', e:'eraser',
+    g:'bucket', s:'clone', q:'liquify', u:'shape', t:'text', c:'crop', i:'eyedropper'
+  };
+  function activateToolByName(toolName){
+    const el = document.querySelector(`.tool[data-tool="${toolName}"]`);
+    if(el) el.click();
+  }
   window.addEventListener('keydown', e=>{
     const tag = document.activeElement.tagName;
+    const typing = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT';
     if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z' && !e.shiftKey){ e.preventDefault(); undo(); return; }
     if((e.ctrlKey||e.metaKey) && (e.key.toLowerCase()==='y' || (e.key.toLowerCase()==='z'&&e.shiftKey))){ e.preventDefault(); redo(); return; }
     if((e.key==='Delete'||e.key==='Backspace') && tag!=='INPUT' && tag!=='TEXTAREA' && selectedIds.length){
@@ -3178,6 +3330,21 @@
       pushHistory(); render(); refreshLayerPanel(); refreshContextPanels();
     }
     if(e.key==='Escape' && selection){ deselect(); }
+    if(!typing && !e.ctrlKey && !e.metaKey && !e.altKey){
+      const key = e.key.toLowerCase();
+      if(TOOL_SHORTCUTS[key]){ e.preventDefault(); activateToolByName(TOOL_SHORTCUTS[key]); return; }
+      if(key==='[' || key===']'){
+        const sizeIds = { brush:'brushSizeNum', eraser:'brushSizeNum', liquify:'liquifyBrushSizeNum', clone:'cloneBrushSizeNum' };
+        const id = sizeIds[currentTool];
+        if(id){
+          e.preventDefault();
+          const input = $(id);
+          const step = Math.max(1, Math.round(Number(input.value)*0.1));
+          input.value = Math.max(Number(input.min)||1, Number(input.value) + (key===']' ? step : -step));
+          input.dispatchEvent(new Event('input', {bubbles:true}));
+        }
+      }
+    }
   });
 
   // ---------- Topbar dropdown menus ----------
@@ -3379,12 +3546,17 @@
 • 왼쪽/오른쪽으로 회전, 좌우반전, 상하반전
 • 불투명도 50으로
 • 필터 흑백/세피아/반전/빈티지/쿨톤/웜톤/드라마틱 (없애줘)
-• 텍스트 "안녕" 추가해줘
+• 텍스트 "안녕" 추가해줘 / 텍스트 가운데 정렬해줘
 • 사각형/원형/삼각형 도형 추가해줘
 • 레이어 삭제해줘 / 그룹으로 묶어줘
+• 그림자/광선/테두리 켜줘 (꺼줘)
+• 격자 켜줘 (꺼줘) / 스냅 켜줘 (꺼줘)
+• 브러시/이동/올가미/마술봉 등 도구로 바꿔줘
 • 확대/축소해줘, 50%로 확대
+• 화면 2분할해줘 / 새 탭 열어줘
+• 선택 해제해줘
 • 실행취소 / 다시실행
-• 저장(다운로드)해줘 / 새 캔버스 (예: "가로 90cm 세로 170cm 새 캔버스 열어줘")
+• 저장(다운로드)해줘 (jpg/webp로도 가능) / 새 캔버스 (예: "가로 90cm 세로 170cm 새 캔버스 열어줘")
 
 레이어 관련 명령은 먼저 레이어를 선택해야 해요.`;
 
@@ -3535,8 +3707,11 @@
 
     if(/저장|다운로드/.test(text)){
       if(!layers.length) return '다운로드할 내용이 없어요.';
-      $('btnDownload').click();
-      return '이미지를 다운로드했어요.';
+      let format = 'png';
+      if(/jpe?g|제이펙|제이피지/i.test(text)) format='jpeg';
+      else if(/webp|웹피/i.test(text)) format='webp';
+      performExport(format, 90, 'white');
+      return `이미지를 ${format.toUpperCase()} 형식으로 다운로드했어요. (다른 형식·화질은 상단 "다운로드" 버튼에서 고를 수 있어요)`;
     }
 
     if(/새\s*캔버스/.test(text)){
@@ -3558,6 +3733,81 @@
       }
       openNewCanvasModal();
       return '새 캔버스 만들기 창을 열었어요. 크기를 정하고 "만들기"를 눌러주세요. (다음엔 "가로 90cm 세로 170cm 새 캔버스"처럼 크기까지 말하면 바로 만들어드려요.)';
+    }
+
+    if(/새\s*탭/.test(text)){
+      createNewDoc();
+      return '새 문서 탭을 열었어요.';
+    }
+
+    if(/화면.*분할|분할.*화면|\d\s*분할/.test(text)){
+      const n = Math.max(1, Math.min(4, Math.round(extractNumber(text,1))));
+      const btn = document.querySelector(`.split-btn[data-split="${n}"]`);
+      if(btn) btn.click();
+      return `화면을 ${n}분할했어요.`;
+    }
+
+    if(/도구/.test(text)){
+      const TOOL_NAME_MAP = {
+        '이동':'move', '올가미':'lasso', '마술봉':'wand', '브러시':'brush', '지우개':'eraser',
+        '페인트':'bucket', '스포이드':'eyedropper', '유동화':'liquify', '클론':'clone', '스탬프':'clone',
+        '도형':'shape', '텍스트':'text', '자르기':'crop', '선택':'select'
+      };
+      for(const name in TOOL_NAME_MAP){
+        if(text.includes(name)){ activateToolByName(TOOL_NAME_MAP[name]); return `${name} 도구로 바꿨어요.`; }
+      }
+      return '어떤 도구인지 못 알아들었어요. (이동/선택/올가미/마술봉/브러시/지우개/페인트/스포이드/유동화/클론/도형/텍스트/자르기)';
+    }
+
+    if(/그림자/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      const on = !/꺼|없애|제거|끄기/.test(text);
+      ensureLayerStyle(layer).shadow.enabled = on;
+      render(); pushHistory(); refreshContextPanels();
+      return `그림자를 ${on?'켰어요':'껐어요'}.`;
+    }
+    if(/광선|발광|글로우/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      const on = !/꺼|없애|제거|끄기/.test(text);
+      ensureLayerStyle(layer).glow.enabled = on;
+      render(); pushHistory(); refreshContextPanels();
+      return `광선을 ${on?'켰어요':'껐어요'}.`;
+    }
+    if(/테두리/.test(text)){
+      const layer = activeLayer(); if(!layer) return '레이어를 먼저 선택해주세요.';
+      const on = !/꺼|없애|제거|끄기/.test(text);
+      ensureLayerStyle(layer).stroke.enabled = on;
+      render(); pushHistory(); refreshContextPanels();
+      return `테두리를 ${on?'켰어요':'껐어요'}.`;
+    }
+
+    if(/격자|그리드/.test(text)){
+      const on = !/꺼|없애|제거|끄기/.test(text);
+      gridEnabled = on; $('gridVisibleToggle').checked = on; render();
+      return `격자를 ${on?'켰어요':'껐어요'}.`;
+    }
+    if(/스냅/.test(text)){
+      const on = !/꺼|없애|제거|끄기/.test(text);
+      snapEnabled = on; $('snapToggle').checked = on;
+      return `스냅을 ${on?'켰어요':'껐어요'}.`;
+    }
+
+    if(/정렬/.test(text) && /왼쪽|가운데|중앙|오른쪽/.test(text)){
+      const layer = activeLayer();
+      if(!layer || layer.type!=='text') return '텍스트 레이어를 먼저 선택해주세요.';
+      let align='left', label='왼쪽';
+      if(/가운데|중앙/.test(text)){ align='center'; label='가운데'; }
+      else if(/오른쪽/.test(text)){ align='right'; label='오른쪽'; }
+      layer.text.align = align;
+      document.querySelectorAll('.text-align-btn').forEach(b=>b.classList.toggle('active', b.dataset.align===align));
+      render(); pushHistory();
+      return `텍스트를 ${label} 정렬했어요.`;
+    }
+
+    if(/선택\s*해제|선택.*취소/.test(text)){
+      if(!selection) return '해제할 선택 영역이 없어요.';
+      deselect();
+      return '선택 영역을 해제했어요.';
     }
 
     return `이해하지 못했어요. "도움말"이라고 입력하면 사용 가능한 명령을 볼 수 있어요.`;
