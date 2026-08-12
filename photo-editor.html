@@ -454,6 +454,45 @@
         </div>
       </div>
 
+      <div class="pgroup" id="layerStyleGroup" style="display:none;">
+        <div class="pgroup-title" data-target="layerStyleContent">레이어 스타일<span class="pgroup-arrow">▼</span></div>
+        <div class="pgroup-content" id="layerStyleContent" style="display:none;">
+          <div style="font-size:11px;color:var(--text-lo);margin-bottom:10px;">그림자와 광선은 동시에 하나만 적용돼요. 테두리는 이미지·텍스트 레이어에서 작동해요 (도형은 자체 "테두리 굵기" 설정을 쓰세요).</div>
+
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-hi);cursor:pointer;margin-bottom:8px;">
+            <input type="checkbox" id="styleShadowEnabled" style="width:auto;margin:0;">그림자
+          </label>
+          <div class="color-row"><input type="color" id="styleShadowColor" value="#000000"><span style="font-size:12px;color:var(--text-lo);">그림자 색상</span></div>
+          <div class="row"><div class="row-label"><span>불투명도</span><span class="val" id="v-shadowOpacity">60</span></div><input type="range" id="styleShadowOpacity" min="0" max="100" value="60"></div>
+          <div class="row"><div class="row-label"><span>흐림</span><span class="val" id="v-shadowBlur">10</span></div><input type="range" id="styleShadowBlur" min="0" max="60" value="10"></div>
+          <div class="row">
+            <div class="row-label"><span>오프셋 X, Y</span></div>
+            <div class="dim-row">
+              <input type="number" id="styleShadowOffsetX" value="6">
+              <span style="color:var(--text-lo);font-size:12px;">,</span>
+              <input type="number" id="styleShadowOffsetY" value="6">
+            </div>
+          </div>
+
+          <div style="height:1px;background:var(--line);margin:14px 0;"></div>
+
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-hi);cursor:pointer;margin-bottom:8px;">
+            <input type="checkbox" id="styleGlowEnabled" style="width:auto;margin:0;">광선 (외부 발광)
+          </label>
+          <div class="color-row"><input type="color" id="styleGlowColor" value="#ffcc00"><span style="font-size:12px;color:var(--text-lo);">광선 색상</span></div>
+          <div class="row"><div class="row-label"><span>불투명도</span><span class="val" id="v-glowOpacity">70</span></div><input type="range" id="styleGlowOpacity" min="0" max="100" value="70"></div>
+          <div class="row"><div class="row-label"><span>크기</span><span class="val" id="v-glowBlur">14</span></div><input type="range" id="styleGlowBlur" min="0" max="60" value="14"></div>
+
+          <div style="height:1px;background:var(--line);margin:14px 0;"></div>
+
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-hi);cursor:pointer;margin-bottom:8px;">
+            <input type="checkbox" id="styleStrokeEnabled" style="width:auto;margin:0;">테두리
+          </label>
+          <div class="color-row"><input type="color" id="styleStrokeColor" value="#ffffff"><span style="font-size:12px;color:var(--text-lo);">테두리 색상</span></div>
+          <div class="row"><div class="row-label"><span>두께</span><span class="val" id="v-strokeStyleWidth">4</span></div><input type="range" id="styleStrokeWidth" min="1" max="40" value="4"></div>
+        </div>
+      </div>
+
       <div class="pgroup" id="adjGroup" style="display:none;">
         <div class="pgroup-title" data-target="adjContent">조정 (선택 레이어)<span class="pgroup-arrow">▼</span></div>
         <div class="pgroup-content" id="adjContent" style="display:none;">
@@ -897,6 +936,61 @@
     if(sx || sy) c.transform(1, Math.tan(sy), Math.tan(sx), 1, 0, 0);
   }
 
+  // ---------- Layer styles (shadow / outer glow / stroke) ----------
+  function ensureLayerStyle(layer){
+    if(!layer.style){
+      layer.style = {
+        shadow:{enabled:false, color:'#000000', opacity:60, blur:10, offsetX:6, offsetY:6},
+        glow:{enabled:false, color:'#ffcc00', opacity:70, blur:14},
+        stroke:{enabled:false, color:'#ffffff', width:4}
+      };
+    }
+    return layer.style;
+  }
+  function applyLayerStyleShadow(c, layer){
+    c.shadowColor = 'rgba(0,0,0,0)';
+    c.shadowBlur = 0; c.shadowOffsetX = 0; c.shadowOffsetY = 0;
+    const style = layer.style;
+    if(!style) return;
+    if(style.glow && style.glow.enabled){
+      const rgb = hexToRgb(style.glow.color);
+      c.shadowColor = `rgba(${rgb.r},${rgb.g},${rgb.b},${style.glow.opacity/100})`;
+      c.shadowBlur = style.glow.blur;
+    } else if(style.shadow && style.shadow.enabled){
+      const rgb = hexToRgb(style.shadow.color);
+      c.shadowColor = `rgba(${rgb.r},${rgb.g},${rgb.b},${style.shadow.opacity/100})`;
+      c.shadowBlur = style.shadow.blur;
+      c.shadowOffsetX = style.shadow.offsetX;
+      c.shadowOffsetY = style.shadow.offsetY;
+    }
+  }
+  function buildSilhouette(sourceCanvas, color){
+    const w = sourceCanvas.width, h = sourceCanvas.height;
+    const off = document.createElement('canvas'); off.width=w; off.height=h;
+    const octx = off.getContext('2d');
+    octx.drawImage(sourceCanvas,0,0);
+    octx.globalCompositeOperation = 'source-in';
+    octx.fillStyle = color;
+    octx.fillRect(0,0,w,h);
+    return off;
+  }
+  function drawLayerStyleStroke(c, layer){
+    const style = layer.style;
+    if(!style || !style.stroke || !style.stroke.enabled || layer.type!=='raster') return;
+    const width = style.stroke.width;
+    const sil = buildSilhouette(layer.canvas, style.stroke.color);
+    const steps = 10;
+    const scaleX = layer.w/layer.canvas.width, scaleY = layer.h/layer.canvas.height;
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0)'; c.shadowBlur = 0;
+    for(let i=0;i<steps;i++){
+      const angle = (i/steps)*Math.PI*2;
+      const ox = Math.cos(angle)*width*scaleX, oy = Math.sin(angle)*width*scaleY;
+      c.drawImage(sil, -layer.w/2+ox, -layer.h/2+oy, layer.w, layer.h);
+    }
+    c.restore();
+  }
+
   // ---------- Render ----------
   function render(forExport){
     ctx.clearRect(0,0,canvas.width,canvas.height);
@@ -915,6 +1009,8 @@
       ctx.rotate(layer.rotation*Math.PI/180);
       ctx.scale(layer.flipH?-1:1, layer.flipV?-1:1);
       applySkew(ctx, layer);
+      drawLayerStyleStroke(ctx, layer);
+      applyLayerStyleShadow(ctx, layer);
       if(layer.type==='raster'){
         ctx.drawImage(layer.canvas, -layer.w/2, -layer.h/2, layer.w, layer.h);
       } else if(layer.type==='shape'){
@@ -925,6 +1021,7 @@
       ctx.restore();
     }
     if(!forExport){
+      drawGrid();
       drawGuides();
       drawSelectionMaskOverlay();
       drawLassoPreview();
@@ -950,12 +1047,21 @@
 
   function drawText(c, layer){
     const t = layer.text;
-    c.fillStyle = t.color;
     c.font = `${t.weight} ${t.size}px ${t.font}`;
     c.textBaseline = 'middle';
     const metrics = c.measureText(t.content || ' ');
     layer.w = Math.max(metrics.width, 10);
     layer.h = t.size*1.2;
+    if(layer.style && layer.style.stroke && layer.style.stroke.enabled){
+      c.save();
+      c.shadowColor = 'rgba(0,0,0,0)'; c.shadowBlur = 0;
+      c.strokeStyle = layer.style.stroke.color;
+      c.lineWidth = layer.style.stroke.width*2;
+      c.lineJoin = 'round';
+      c.strokeText(t.content, -layer.w/2, 0);
+      c.restore();
+    }
+    c.fillStyle = t.color;
     c.fillText(t.content, -layer.w/2, 0);
   }
 
@@ -1259,7 +1365,14 @@
     if(!dragMode || (!layers.length && dragMode!=='selectnew' && dragMode!=='lasso')) return;
     const pt = canvasPointFromEvent(e);
     if(dragMode==='move'){
-      const dx = pt.x-dragStartPt.x, dy = pt.y-dragStartPt.y;
+      let dx = pt.x-dragStartPt.x, dy = pt.y-dragStartPt.y;
+      if(dragOrigLayers.length){
+        const primary = layers.find(l=>l.id===dragOrigLayers[0].id);
+        if(primary){
+          const snapped = computeSnapDelta(primary, dx, dy, dragOrigLayers[0].x, dragOrigLayers[0].y);
+          dx = snapped.dx; dy = snapped.dy;
+        }
+      }
       dragOrigLayers.forEach(o=>{ const l = layers.find(x=>x.id===o.id); if(l){ l.x=o.x+dx; l.y=o.y+dy; } });
       render();
     } else if(dragMode==='resize'){
@@ -1924,6 +2037,7 @@
     copy.name = layer.name + ' 복사본';
     copy.x += 20; copy.y += 20;
     copy.groupId = null;
+    if(layer.style) copy.style = { shadow:{...layer.style.shadow}, glow:{...layer.style.glow}, stroke:{...layer.style.stroke} };
     if(layer.type==='raster'){
       const c = document.createElement('canvas'); c.width=layer.canvas.width; c.height=layer.canvas.height;
       c.getContext('2d').drawImage(layer.canvas,0,0);
@@ -2177,6 +2291,7 @@
   function refreshContextPanels(){
     const layer = activeLayer();
     $('layerPropsGroup').style.display = layer ? 'block':'none';
+    $('layerStyleGroup').style.display = layer ? 'block':'none';
     $('adjGroup').style.display = layer ? 'block':'none';
     $('filterGroup').style.display = (layer && layer.type==='raster') ? 'block':'none';
     $('textGroup').style.display = (currentTool==='text' || (layer && layer.type==='text')) ? 'block':'none';
@@ -2184,6 +2299,20 @@
     $('sharpenRow').style.display = (layer && layer.type==='raster') ? 'block':'none';
 
     if(!layer) return;
+    const style = layer.style || { shadow:{enabled:false,color:'#000000',opacity:60,blur:10,offsetX:6,offsetY:6}, glow:{enabled:false,color:'#ffcc00',opacity:70,blur:14}, stroke:{enabled:false,color:'#ffffff',width:4} };
+    $('styleShadowEnabled').checked = style.shadow.enabled;
+    $('styleShadowColor').value = style.shadow.color;
+    $('styleShadowOpacity').value = style.shadow.opacity; $('v-shadowOpacity').textContent = style.shadow.opacity;
+    $('styleShadowBlur').value = style.shadow.blur; $('v-shadowBlur').textContent = style.shadow.blur;
+    $('styleShadowOffsetX').value = style.shadow.offsetX;
+    $('styleShadowOffsetY').value = style.shadow.offsetY;
+    $('styleGlowEnabled').checked = style.glow.enabled;
+    $('styleGlowColor').value = style.glow.color;
+    $('styleGlowOpacity').value = style.glow.opacity; $('v-glowOpacity').textContent = style.glow.opacity;
+    $('styleGlowBlur').value = style.glow.blur; $('v-glowBlur').textContent = style.glow.blur;
+    $('styleStrokeEnabled').checked = style.stroke.enabled;
+    $('styleStrokeColor').value = style.stroke.color;
+    $('styleStrokeWidth').value = style.stroke.width; $('v-strokeStyleWidth').textContent = style.stroke.width;
     $('layerXInput').value = Math.round(layer.x);
     $('layerYInput').value = Math.round(layer.y);
     $('layerRotationInput').value = Math.round(layer.rotation);
@@ -2312,6 +2441,38 @@
     $('v-skewx').textContent = '0°'; $('v-skewy').textContent = '0°';
     pushHistory(); render();
   });
+
+  // ---------- Layer style bindings ----------
+  function bindStyleCheckbox(id, group, key){
+    $(id).addEventListener('change', ()=>{
+      const layer = activeLayer(); if(!layer) return;
+      ensureLayerStyle(layer)[group][key] = $(id).checked;
+      render(); pushHistory();
+    });
+  }
+  function bindStyleInput(id, group, key, isColor, labelId, suffix){
+    $(id).addEventListener('input', ()=>{
+      const layer = activeLayer(); if(!layer) return;
+      const val = isColor ? $(id).value : Number($(id).value);
+      ensureLayerStyle(layer)[group][key] = val;
+      if(labelId) $(labelId).textContent = val + (suffix||'');
+      render();
+    });
+    $(id).addEventListener('change', ()=>{ if(activeLayer()) pushHistory(); });
+  }
+  bindStyleCheckbox('styleShadowEnabled','shadow','enabled');
+  bindStyleInput('styleShadowColor','shadow','color',true);
+  bindStyleInput('styleShadowOpacity','shadow','opacity',false,'v-shadowOpacity');
+  bindStyleInput('styleShadowBlur','shadow','blur',false,'v-shadowBlur');
+  bindStyleInput('styleShadowOffsetX','shadow','offsetX',false);
+  bindStyleInput('styleShadowOffsetY','shadow','offsetY',false);
+  bindStyleCheckbox('styleGlowEnabled','glow','enabled');
+  bindStyleInput('styleGlowColor','glow','color',true);
+  bindStyleInput('styleGlowOpacity','glow','opacity',false,'v-glowOpacity');
+  bindStyleInput('styleGlowBlur','glow','blur',false,'v-glowBlur');
+  bindStyleCheckbox('styleStrokeEnabled','stroke','enabled');
+  bindStyleInput('styleStrokeColor','stroke','color',true);
+  bindStyleInput('styleStrokeWidth','stroke','width',false,'v-strokeStyleWidth');
 
   // ---------- Layer size: numeric width/height & percentage scale ----------
   $('layerWidthInput').addEventListener('input', ()=>{
@@ -2837,6 +2998,10 @@
   // ---------- Guides ----------
   let guides = [];
   let guidesVisible = true;
+  let gridEnabled = false;
+  let gridSize = 50;
+  let snapEnabled = true;
+  const SNAP_TOLERANCE = 8;
   function drawGuides(){
     if(!guides.length || !guidesVisible) return;
     ctx.save();
@@ -2850,6 +3015,44 @@
     });
     ctx.restore();
   }
+  function drawGrid(){
+    if(!gridEnabled || !canvas.width) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = 1;
+    for(let x=0; x<=canvas.width; x+=gridSize){
+      const sx = Math.round(x)+0.5;
+      ctx.beginPath(); ctx.moveTo(sx,0); ctx.lineTo(sx,canvas.height); ctx.stroke();
+    }
+    for(let y=0; y<=canvas.height; y+=gridSize){
+      const sy = Math.round(y)+0.5;
+      ctx.beginPath(); ctx.moveTo(0,sy); ctx.lineTo(canvas.width,sy); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function computeSnapDelta(layer, rawDx, rawDy, origX, origY){
+    if(!snapEnabled) return { dx:rawDx, dy:rawDy };
+    const newX = origX+rawDx, newY = origY+rawDy;
+    const halfW = layer.w/2, halfH = layer.h/2;
+    const edgesX = [newX-halfW, newX, newX+halfW];
+    const edgesY = [newY-halfH, newY, newY+halfH];
+    const targetsX = [0, canvas.width/2, canvas.width];
+    const targetsY = [0, canvas.height/2, canvas.height];
+    guides.forEach(g=>{ if(g.type==='v') targetsX.push(g.pos); else targetsY.push(g.pos); });
+    if(gridEnabled){
+      const startX = Math.floor((newX-halfW-SNAP_TOLERANCE)/gridSize)*gridSize;
+      for(let gx=startX; gx<=newX+halfW+SNAP_TOLERANCE; gx+=gridSize) targetsX.push(gx);
+      const startY = Math.floor((newY-halfH-SNAP_TOLERANCE)/gridSize)*gridSize;
+      for(let gy=startY; gy<=newY+halfH+SNAP_TOLERANCE; gy+=gridSize) targetsY.push(gy);
+    }
+    let bestDx=null, bestDy=null;
+    edgesX.forEach(ex=>{ targetsX.forEach(tx=>{ const diff=tx-ex; if(Math.abs(diff)<=SNAP_TOLERANCE && (bestDx===null||Math.abs(diff)<Math.abs(bestDx))) bestDx=diff; }); });
+    edgesY.forEach(ey=>{ targetsY.forEach(ty=>{ const diff=ty-ey; if(Math.abs(diff)<=SNAP_TOLERANCE && (bestDy===null||Math.abs(diff)<Math.abs(bestDy))) bestDy=diff; }); });
+    return { dx: rawDx+(bestDx||0), dy: rawDy+(bestDy||0) };
+  }
+  $('gridVisibleToggle').addEventListener('change', ()=>{ gridEnabled = $('gridVisibleToggle').checked; render(); });
+  $('gridSize').addEventListener('input', ()=>{ gridSize = Number($('gridSize').value); $('v-gridSize').textContent = gridSize+'px'; render(); });
+  $('snapToggle').addEventListener('change', ()=>{ snapEnabled = $('snapToggle').checked; });
   function refreshGuideList(){
     const list = $('guideList'); list.innerHTML='';
     guides.forEach((g,i)=>{
@@ -2907,6 +3110,7 @@
   function cloneSnapshot(snap){
     return snap.map(l=>{
       const copy = {...l, adjustments:{...l.adjustments}};
+      if(l.style) copy.style = { shadow:{...l.style.shadow}, glow:{...l.style.glow}, stroke:{...l.style.stroke} };
       if(l.type==='raster'){ const c=document.createElement('canvas'); c.width=l.canvas.width; c.height=l.canvas.height; c.getContext('2d').drawImage(l.canvas,0,0); copy.canvas=c; }
       if(l.type==='text') copy.text = {...l.text};
       if(l.type==='shape') copy.shape = {...l.shape};
@@ -3398,7 +3602,7 @@
     const base = {id:l.id, type:l.type, name:l.name, x:l.x, y:l.y, w:l.w, h:l.h, rotation:l.rotation,
       flipH:l.flipH, flipV:l.flipV, opacity:l.opacity, blend:l.blend, visible:l.visible,
       adjustments:l.adjustments, filterPreset:l.filterPreset, groupId:l.groupId||null,
-      skewX:l.skewX||0, skewY:l.skewY||0};
+      skewX:l.skewX||0, skewY:l.skewY||0, style:l.style||null};
     if(l.type==='raster') base.dataUrl = l.canvas.toDataURL('image/png');
     if(l.type==='text') base.text = l.text;
     if(l.type==='shape') base.shape = l.shape;
