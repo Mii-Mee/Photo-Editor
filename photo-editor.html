@@ -420,6 +420,7 @@
               <span style="color:var(--text-lo);font-size:12px;">×</span>
               <input type="number" id="layerHeightInput" min="1">
             </div>
+            <div id="layerSizeLockNote" style="font-size:11px;color:var(--accent);margin-top:6px;display:none;font-weight:600;"></div>
           </div>
           <div class="row">
             <div class="row-label"><span>비율로 크기 조정</span></div>
@@ -753,6 +754,15 @@
       <div style="font-size:11px;color:var(--text-lo);margin-bottom:14px;">문서 전체를 새 크기로 다시 계산합니다. 모든 레이어가 함께 확대/축소돼요.</div>
 
       <div class="modal-row">
+        <label class="modal-label">비율로 조정</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="range" id="imgScalePercent" min="1" max="400" value="100" style="flex:1;">
+          <input type="number" id="imgScalePercentNum" min="1" max="2000" value="100" style="width:66px;">
+          <span style="color:var(--text-lo);font-size:12px;">%</span>
+        </div>
+      </div>
+
+      <div class="modal-row">
         <label class="modal-label">크기</label>
         <div class="dim-row">
           <input type="number" id="imgWidth" min="1">
@@ -768,11 +778,10 @@
             <option value="mm">밀리미터 (mm)</option>
             <option value="pt">포인트 (pt)</option>
           </select>
-          <select id="imgRes">
-            <option value="72">72 ppi (웹)</option>
-            <option value="150">150 ppi</option>
-            <option value="300">300 ppi (인쇄)</option>
-          </select>
+          <div style="display:flex;align-items:center;gap:4px;flex:1;">
+            <input type="number" id="imgRes" min="1" max="2400" value="72" style="width:100%;">
+            <span style="color:var(--text-lo);font-size:12px;white-space:nowrap;">dpi</span>
+          </div>
         </div>
       </div>
 
@@ -780,6 +789,8 @@
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-hi);cursor:pointer;">
           <input type="checkbox" id="imgLockAspect" checked style="width:auto;margin:0;"> 가로세로 비율 고정
         </label>
+        <div style="font-size:11px;color:var(--text-lo);margin-top:4px;">체크하면 비율이 유지돼서 가로/세로 중 하나를 입력하면 다른 쪽이 자동으로 바뀌어요. 가로·세로를 각각 원하는 값으로 따로 지정하려면 체크를 해제하세요.</div>
+        <div id="imgLockNote" style="font-size:11px;color:var(--accent);margin-top:6px;display:none;font-weight:600;"></div>
       </div>
 
       <div class="modal-row" style="margin-bottom:0;">
@@ -886,6 +897,12 @@
         </div>
       </div>
 
+      <div class="modal-row" id="exportDpiRow">
+        <label class="modal-label">DPI (해상도 메타데이터)</label>
+        <input type="number" id="exportDpi" min="1" max="2400" value="72">
+        <div style="font-size:11px;color:var(--text-lo);margin-top:4px;">픽셀 크기와는 별개로, 파일에 기록되는 "인쇄 해상도" 정보예요. 사진 뷰어·인쇄 프로그램이 이 값 기준으로 실제 크기를 계산해요. 웹용은 72, 인쇄용은 300을 추천해요. (WebP는 지원 안 함)</div>
+      </div>
+
       <div class="modal-row" style="margin-bottom:0;">
         <div id="exportSizeHint" style="font-size:11px;color:var(--text-lo);">PNG는 무손실이라 파일이 더 커요. JPEG/WebP는 화질을 낮출수록 용량이 작아져요.</div>
       </div>
@@ -933,6 +950,7 @@
   let nextId = 1;
   let currentTool = 'move';
   let currentColor = '#ff7a3d';
+  let documentDpi = 72;
   let dragMode = null, dragHandle = null, dragStartPt = null, dragOrigLayers = [];
   let selectDragPt = null;
   let isPainting = false, lastPaintPt = null, paintTarget = null;
@@ -2368,6 +2386,7 @@
     $('textGroup').style.display = (currentTool==='text' || (layer && layer.type==='text')) ? 'block':'none';
     $('shapeGroup').style.display = (currentTool==='shape' || (layer && layer.type==='shape')) ? 'block':'none';
     $('sharpenRow').style.display = (layer && layer.type==='raster') ? 'block':'none';
+    $('layerSizeLockNote').style.display = 'none';
 
     if(!layer) return;
     const style = layer.style || { shadow:{enabled:false,color:'#000000',opacity:60,blur:10,offsetX:6,offsetY:6}, glow:{enabled:false,color:'#ffcc00',opacity:70,blur:14}, stroke:{enabled:false,color:'#ffffff',width:4} };
@@ -2550,12 +2569,20 @@
   bindStyleInput('styleStrokeWidth','stroke','width',false,'v-strokeStyleWidth');
 
   // ---------- Layer size: numeric width/height & percentage scale ----------
+  $('lockAspect').addEventListener('change', ()=>{
+    if(!$('lockAspect').checked) $('layerSizeLockNote').style.display = 'none';
+  });
   $('layerWidthInput').addEventListener('input', ()=>{
     const layer = activeLayer(); if(!layer || layer.type==='text') return;
     const newW = Math.max(1, Number($('layerWidthInput').value)||1);
     if($('lockAspect').checked && layer.w>0){
       const ratio = layer.h/layer.w;
-      layer.h = Math.max(1, Math.round(newW*ratio));
+      const newH = Math.max(1, Math.round(newW*ratio));
+      if(String(newH) !== $('layerHeightInput').value){
+        $('layerSizeLockNote').style.display = 'block';
+        $('layerSizeLockNote').textContent = `🔒 비율 유지로 높이가 ${newH}px로 자동 조정돼요.`;
+      }
+      layer.h = newH;
       $('layerHeightInput').value = layer.h;
     }
     layer.w = newW;
@@ -2568,7 +2595,12 @@
     const newH = Math.max(1, Number($('layerHeightInput').value)||1);
     if($('lockAspect').checked && layer.h>0){
       const ratio = layer.w/layer.h;
-      layer.w = Math.max(1, Math.round(newH*ratio));
+      const newW = Math.max(1, Math.round(newH*ratio));
+      if(String(newW) !== $('layerWidthInput').value){
+        $('layerSizeLockNote').style.display = 'block';
+        $('layerSizeLockNote').textContent = `🔒 비율 유지로 너비가 ${newW}px로 자동 조정돼요.`;
+      }
+      layer.w = newW;
       $('layerWidthInput').value = layer.w;
     }
     layer.h = newH;
@@ -2917,18 +2949,35 @@
     const w = toPx(Number($('ncWidth').value)||1, unit, ppi);
     const h = toPx(Number($('ncHeight').value)||1, unit, ppi);
     createCanvasDoc(w, h, ncBg);
+    documentDpi = ppi;
     setStatus(`새 캔버스 ${w}×${h}px 생성됨 (${unit==='px'?'픽셀':unit+', '+ppi+'ppi'})`);
     closeNewCanvasModal();
   });
 
   // ---------- Image Size modal (resamples whole document) ----------
   let imgAspect = 1;
+  let imgPrevUnit = 'px';
+  let imgOriginalW = 0, imgOriginalH = 0;
+  function pxToUnit(px, unit, ppi){
+    if(unit==='px') return px;
+    const inches = px/(ppi||72);
+    if(unit==='in') return inches;
+    if(unit==='cm') return inches*2.54;
+    if(unit==='mm') return inches*25.4;
+    if(unit==='pt') return inches*72;
+    return px;
+  }
+  function round2(v){ return Math.round(v*100)/100; }
   function openImageSizeModal(){
     if(!canvas.width) return;
+    imgOriginalW = canvas.width; imgOriginalH = canvas.height;
     $('imgWidth').value = canvas.width; $('imgHeight').value = canvas.height;
-    $('imgUnit').value = 'px'; $('imgRes').value = 72; $('imgRes').disabled = true;
-    $('imgRes').closest('.unit-row').style.opacity = '.5';
+    $('imgUnit').value = 'px'; imgPrevUnit = 'px';
+    $('imgRes').value = 72; $('imgRes').disabled = false;
+    $('imgRes').closest('.unit-row').style.opacity = '1';
     $('imgLockAspect').checked = true;
+    $('imgLockNote').style.display = 'none';
+    $('imgScalePercent').value = 100; $('imgScalePercentNum').value = 100;
     imgAspect = canvas.width / canvas.height;
     updateImgPreview();
     $('imageSizeModal').classList.add('show');
@@ -2936,7 +2985,7 @@
   function closeImageSizeModal(){ $('imageSizeModal').classList.remove('show'); }
   function updateImgPreview(){
     const w = Number($('imgWidth').value)||1, h = Number($('imgHeight').value)||1;
-    const unit = $('imgUnit').value, ppi = Number($('imgRes').value);
+    const unit = $('imgUnit').value, ppi = Number($('imgRes').value)||72;
     $('imgPxPreview').textContent = `${toPx(w,unit,ppi)} × ${toPx(h,unit,ppi)} px`;
   }
   $('btnImageSize').addEventListener('click', openImageSizeModal);
@@ -2947,20 +2996,61 @@
     imgAspect = 1/imgAspect;
     updateImgPreview();
   });
+  $('imgLockAspect').addEventListener('change', ()=>{
+    if(!$('imgLockAspect').checked) $('imgLockNote').style.display = 'none';
+  });
   $('imgWidth').addEventListener('input', ()=>{
-    if($('imgLockAspect').checked){ $('imgHeight').value = Math.max(1, Math.round(Number($('imgWidth').value)/imgAspect)); }
+    if($('imgLockAspect').checked){
+      const newH = Math.max(1, Math.round(Number($('imgWidth').value)/imgAspect));
+      if(String(newH) !== $('imgHeight').value){
+        $('imgLockNote').style.display = 'block';
+        $('imgLockNote').textContent = `🔒 비율 유지로 세로가 ${newH}(으)로 자동 조정돼요.`;
+      }
+      $('imgHeight').value = newH;
+    }
     updateImgPreview();
   });
   $('imgHeight').addEventListener('input', ()=>{
-    if($('imgLockAspect').checked){ $('imgWidth').value = Math.max(1, Math.round(Number($('imgHeight').value)*imgAspect)); }
+    if($('imgLockAspect').checked){
+      const newW = Math.max(1, Math.round(Number($('imgHeight').value)*imgAspect));
+      if(String(newW) !== $('imgWidth').value){
+        $('imgLockNote').style.display = 'block';
+        $('imgLockNote').textContent = `🔒 비율 유지로 가로가 ${newW}(으)로 자동 조정돼요.`;
+      }
+      $('imgWidth').value = newW;
+    }
     updateImgPreview();
   });
-  ['imgUnit','imgRes'].forEach(id=>{
-    $(id).addEventListener('input', ()=>{
-      $('imgRes').disabled = $('imgUnit').value==='px';
-      $('imgRes').closest('.unit-row').style.opacity = $('imgUnit').value==='px' ? '.5' : '1';
-      updateImgPreview();
-    });
+  // Switching units converts the displayed numbers so they represent the same real size
+  $('imgUnit').addEventListener('change', ()=>{
+    const newUnit = $('imgUnit').value;
+    const ppi = Number($('imgRes').value)||72;
+    const wPx = toPx(Number($('imgWidth').value)||1, imgPrevUnit, ppi);
+    const hPx = toPx(Number($('imgHeight').value)||1, imgPrevUnit, ppi);
+    $('imgWidth').value = round2(pxToUnit(wPx, newUnit, ppi));
+    $('imgHeight').value = round2(pxToUnit(hPx, newUnit, ppi));
+    imgPrevUnit = newUnit;
+    updateImgPreview();
+  });
+  // Changing DPI alone doesn't change the physical width/height numbers, only the resulting pixel count
+  $('imgRes').addEventListener('input', updateImgPreview);
+  // Percentage-based scaling relative to the size the modal was opened with
+  function applyImgScalePercent(pct){
+    const unit = $('imgUnit').value, ppi = Number($('imgRes').value)||72;
+    const wPx = imgOriginalW*pct/100, hPx = imgOriginalH*pct/100;
+    $('imgWidth').value = round2(pxToUnit(wPx, unit, ppi));
+    $('imgHeight').value = round2(pxToUnit(hPx, unit, ppi));
+    $('imgLockNote').style.display = 'none';
+    updateImgPreview();
+  }
+  $('imgScalePercent').addEventListener('input', ()=>{
+    $('imgScalePercentNum').value = $('imgScalePercent').value;
+    applyImgScalePercent(Number($('imgScalePercent').value));
+  });
+  $('imgScalePercentNum').addEventListener('input', ()=>{
+    const v = Math.max(1, Math.min(2000, Number($('imgScalePercentNum').value)||100));
+    if(v<=400) $('imgScalePercent').value = v;
+    applyImgScalePercent(v);
   });
   $('btnImgApply').addEventListener('click', ()=>{
     const unit = $('imgUnit').value, ppi = Number($('imgRes').value)||72;
@@ -2970,10 +3060,11 @@
     const scaleX = newW/canvas.width, scaleY = newH/canvas.height;
     layers.forEach(l=>{ l.x*=scaleX; l.y*=scaleY; l.w*=scaleX; l.h*=scaleY; });
     canvas.width = newW; canvas.height = newH;
+    documentDpi = ppi;
     applyZoom(100);
     deselect();
     pushHistory(); render(); refreshLayerPanel(); refreshContextPanels();
-    setStatus(`이미지 크기가 ${newW}×${newH}px로 조정됨`);
+    setStatus(`이미지 크기가 ${newW}×${newH}px로 조정됨 (${ppi}dpi 기준 — 다운로드 시 DPI도 ${ppi}로 맞춰야 실제 크기가 유지돼요)`);
     closeImageSizeModal();
   });
 
@@ -3036,6 +3127,7 @@
         rotation:0, flipH:false, flipV:false, opacity:100, blend:'source-over', visible:true, adjustments:blankAdj(), filterPreset:'none'});
     }
     canvas.width = newW; canvas.height = newH;
+    documentDpi = ppi;
     applyZoom(100);
     deselect();
     pushHistory(); render(); refreshLayerPanel(); refreshContextPanels();
@@ -3253,9 +3345,78 @@
   $('btnRedo').addEventListener('click', redo);
 
   // ---------- Download ----------
-  function performExport(format, qualityPct, bg){
+  // ---------- DPI metadata embedding (canvas export strips DPI entirely otherwise) ----------
+  function dataUrlToBytes(dataUrl){
+    const base64 = dataUrl.split(',')[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  function bytesToDataUrl(bytes, mime){
+    let binary = '';
+    const chunkSize = 0x8000;
+    for(let i=0;i<bytes.length;i+=chunkSize){
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunkSize));
+    }
+    return 'data:'+mime+';base64,'+btoa(binary);
+  }
+  function setJpegDpi(bytes, dpi){
+    if(bytes[2]===0xFF && bytes[3]===0xE0 &&
+       bytes[6]===0x4A && bytes[7]===0x46 && bytes[8]===0x49 && bytes[9]===0x46 && bytes[10]===0x00){
+      bytes[13] = 1; // units = dots per inch
+      bytes[14] = (dpi>>8)&0xFF; bytes[15] = dpi&0xFF; // Xdensity
+      bytes[16] = (dpi>>8)&0xFF; bytes[17] = dpi&0xFF; // Ydensity
+    }
+    return bytes;
+  }
+  function crc32(buf){
+    if(!crc32.table){
+      const t = [];
+      for(let n=0;n<256;n++){
+        let c = n;
+        for(let k=0;k<8;k++) c = c&1 ? (0xEDB88320 ^ (c>>>1)) : (c>>>1);
+        t[n] = c>>>0;
+      }
+      crc32.table = t;
+    }
+    let c = 0xFFFFFFFF;
+    for(let i=0;i<buf.length;i++) c = crc32.table[(c ^ buf[i]) & 0xFF] ^ (c>>>8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function setPngDpi(bytes, dpi){
+    const pixelsPerMeter = Math.round(dpi * 39.3701);
+    const typeAndData = new Uint8Array(4+9);
+    typeAndData.set([0x70,0x48,0x59,0x73], 0); // "pHYs"
+    const dvTD = new DataView(typeAndData.buffer);
+    dvTD.setUint32(4, pixelsPerMeter);
+    dvTD.setUint32(8, pixelsPerMeter);
+    typeAndData[12] = 1; // unit: meters
+    const crc = crc32(typeAndData);
+    const chunk = new Uint8Array(4+4+9+4);
+    const dv = new DataView(chunk.buffer);
+    dv.setUint32(0, 9);
+    chunk.set(typeAndData, 4);
+    dv.setUint32(4+13, crc);
+    const insertPos = 8 + 4+4+13+4; // signature + IHDR chunk (always first)
+    const result = new Uint8Array(bytes.length + chunk.length);
+    result.set(bytes.subarray(0, insertPos), 0);
+    result.set(chunk, insertPos);
+    result.set(bytes.subarray(insertPos), insertPos+chunk.length);
+    return result;
+  }
+  function embedDpi(dataUrl, mime, format, dpi){
+    if(!dpi || dpi<=0 || (format!=='jpeg' && format!=='png')) return dataUrl;
+    try{
+      let bytes = dataUrlToBytes(dataUrl);
+      bytes = format==='jpeg' ? setJpegDpi(bytes, dpi) : setPngDpi(bytes, dpi);
+      return bytesToDataUrl(bytes, mime);
+    }catch(err){ return dataUrl; }
+  }
+
+  function performExport(format, qualityPct, bg, dpi){
     render(true);
-    let dataUrl, ext;
+    let dataUrl, ext, mime;
     if(format==='jpeg'){
       const off = document.createElement('canvas'); off.width=canvas.width; off.height=canvas.height;
       const octx = off.getContext('2d');
@@ -3263,24 +3424,26 @@
       octx.fillRect(0,0,off.width,off.height);
       octx.drawImage(canvas,0,0);
       dataUrl = off.toDataURL('image/jpeg', (qualityPct||90)/100);
-      ext = 'jpg';
+      ext = 'jpg'; mime = 'image/jpeg';
     } else if(format==='webp'){
       dataUrl = canvas.toDataURL('image/webp', (qualityPct||90)/100);
-      ext = 'webp';
+      ext = 'webp'; mime = 'image/webp';
     } else {
       dataUrl = canvas.toDataURL('image/png');
-      ext = 'png';
+      ext = 'png'; mime = 'image/png';
     }
     render();
+    dataUrl = embedDpi(dataUrl, mime, format, dpi);
     const link = document.createElement('a');
     link.download = `edited-image.${ext}`;
     link.href = dataUrl;
     link.click();
-    setStatus(`이미지를 ${format.toUpperCase()} 형식으로 다운로드했어요.`);
+    setStatus(`이미지를 ${format.toUpperCase()} 형식으로 다운로드했어요.${dpi && (format==='jpeg'||format==='png') ? ` (${dpi} DPI로 저장됨)` : ''}`);
   }
   let exportFormat = 'png', exportBg = 'white';
   function openExportModal(){
     if(!layers.length) return;
+    $('exportDpi').value = documentDpi;
     $('exportModal').classList.add('show');
   }
   function closeExportModal(){ $('exportModal').classList.remove('show'); }
@@ -3291,6 +3454,7 @@
       exportFormat = b.dataset.format;
       $('exportQualityRow').style.display = exportFormat==='png' ? 'none' : 'block';
       $('exportBgRow').style.display = exportFormat==='jpeg' ? 'block' : 'none';
+      $('exportDpiRow').style.display = exportFormat==='webp' ? 'none' : 'block';
     });
   });
   document.querySelectorAll('#exportBgOptions .bg-opt').forEach(b=>{
@@ -3305,7 +3469,8 @@
   $('btnExportCancel').addEventListener('click', closeExportModal);
   $('exportModal').addEventListener('click', e=>{ if(e.target.id==='exportModal') closeExportModal(); });
   $('btnExportConfirm').addEventListener('click', ()=>{
-    performExport(exportFormat, Number($('exportQuality').value), exportBg);
+    const dpi = Number($('exportDpi').value)||72;
+    performExport(exportFormat, Number($('exportQuality').value), exportBg, dpi);
     closeExportModal();
   });
 
@@ -3390,6 +3555,7 @@
     doc.guides = guides;
     doc.guidesVisible = guidesVisible;
     doc.zoomPct = currentZoomPct;
+    doc.dpi = documentDpi;
     doc.thumbnail = captureActiveThumbnail();
   }
   function loadDocIntoActive(idx){
@@ -3401,6 +3567,7 @@
     historyIndex = doc.historyIndex;
     guides = doc.guides;
     guidesVisible = doc.guidesVisible;
+    documentDpi = doc.dpi || 72;
     $('guidesVisibleToggle').checked = guidesVisible;
     selection = null; selectionOverlayCanvas = null; lassoPoints = []; updateSelectionOverlay();
     cropRect = null; cropBoxEl.style.display = 'none';
@@ -3421,7 +3588,7 @@
   function createNewDoc(name){
     if(activeDocIndex>=0) saveActiveIntoDoc(activeDocIndex);
     const doc = { id:makeDocId(), name: name || `문서 ${documents.length+1}`, width:0, height:0,
-      layers:[], selectedIds:[], historyStack:[], historyIndex:-1, guides:[], guidesVisible:true, zoomPct:100, thumbnail:null };
+      layers:[], selectedIds:[], historyStack:[], historyIndex:-1, guides:[], guidesVisible:true, zoomPct:100, dpi:72, thumbnail:null };
     documents.push(doc);
     loadDocIntoActive(documents.length-1);
   }
@@ -3710,7 +3877,7 @@
       let format = 'png';
       if(/jpe?g|제이펙|제이피지/i.test(text)) format='jpeg';
       else if(/webp|웹피/i.test(text)) format='webp';
-      performExport(format, 90, 'white');
+      performExport(format, 90, 'white', documentDpi);
       return `이미지를 ${format.toUpperCase()} 형식으로 다운로드했어요. (다른 형식·화질은 상단 "다운로드" 버튼에서 고를 수 있어요)`;
     }
 
@@ -3867,7 +4034,8 @@
       layers: (isActive ? layers : doc.layers).map(serializeLayerForSave),
       guides: isActive ? guides : doc.guides,
       guidesVisible: isActive ? guidesVisible : doc.guidesVisible,
-      zoomPct: isActive ? currentZoomPct : doc.zoomPct
+      zoomPct: isActive ? currentZoomPct : doc.zoomPct,
+      dpi: isActive ? documentDpi : doc.dpi
     };
   }
   function performAutosave(){
@@ -3921,7 +4089,7 @@
     return { id:savedDoc.id, name:savedDoc.name, width:savedDoc.width, height:savedDoc.height,
       layers:newLayers, selectedIds:[], historyStack:[], historyIndex:-1,
       guides:savedDoc.guides||[], guidesVisible:savedDoc.guidesVisible!==false,
-      zoomPct:savedDoc.zoomPct||100, thumbnail:null };
+      zoomPct:savedDoc.zoomPct||100, dpi:savedDoc.dpi||72, thumbnail:null };
   }
   async function restoreAutosave(){
     let raw;
